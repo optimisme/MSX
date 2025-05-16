@@ -121,116 +121,122 @@ extern void vdp_blast_line(const unsigned char* src) __z88dk_fastcall;
  */
 extern void vdp_blast_tilemap(const unsigned char* src) __z88dk_fastcall;
 
-/**
- * Initialize the video display processor (VDP) and set up screen mode.
- *
- * Configures the MSX screen mode and adjusts VDP registers for Mode 2.
- */
-void init_screen(void);
 
 /**
- * Load an 8-byte tile pattern into the VDP pattern generator table.
+ * Configure the video display processor (VDP) and set up the screen mode.
  *
- * In Mode 2, replicates the pattern across three banks of 0x800 bytes.
- * In other modes, writes to the base PATTERN_TABLE.
- *
- * @param group 1 is top, 2 is middle, 3 is bottom of the screen.
- * @param index Pattern index (0–255) where the tile will be stored.
- * @param tile  Pointer to an array of 8 bytes defining the pattern.
+ * This function sets the MSX video mode and, if using Mode 2,
+ * forces the pattern and color table bases to the correct VRAM addresses.
  */
-void init_tile(const unsigned char group, const unsigned char index, const unsigned char *tile);
+void vdp_set_screen_mode(void);
 
 /**
- * Set the foreground/background colors for a specific tile index.
+ * Configure an 8-byte tile pattern in the VDP pattern generator table.
  *
- * Writes an attribute byte (FG in high nibble, BG in low nibble) for
- * each of the 8 rows of the tile across all three color table banks.
+ * In Mode 2, the pattern table is split into three 0x800-byte banks,
+ * so the tile data is written to the appropriate bank based on tile_bank.
+ * In other modes, only one block at VRAM_PATTERN_BASE is used.
  *
- * @param group 1 is top, 2 is middle, 3 is bottom of the screen
- * @param index Tile index (0–255) in the color table.
- * @param fg    Foreground color code (0–15).
- * @param bg    Background color code (0–15).
+ * @param tile_bank        Bank number (0–3) representing vertical screen section
+ * @param tile_index       Pattern index (0–255) where the tile will be stored
+ * @param pattern_data     Pointer to an array of 8 bytes defining the 8×8 pattern
  */
-void init_color_for_tile(const unsigned char group, const unsigned char index, const unsigned char fg, const unsigned char bg);
+void vdp_set_tile_pattern(uint8_t tile_bank, uint8_t tile_index, const uint8_t pattern_data[8]);
 
 /**
- * Set the color attributes de totes les 8 línies
- * d’un tile en SCREEN 2, rebent per separat
- * els colors de foreground i de background.
+ * Configure a single color for all 8 rows of a given tile index.
  *
- * @param group    1–3 banc de blocs (top, middle, bottom)
- * @param index    tile index (0–255)
- * @param fgCols   punter a 8 bytes: color de primer pla (0–15) per línia
- * @param bgCols   punter a 8 bytes: color de fons      (0–15) per línia
+ * Writes an attribute byte (high nibble=foreground, low nibble=background)
+ * for each of the 8 rows in the specified color bank.
+ *
+ * @param tile_bank        Bank number (0–3) representing vertical screen section
+ * @param tile_index       Tile index (0–255) in the color table
+ * @param fg_color         Foreground color code (0–15)
+ * @param bg_color         Background color code (0–15)
  */
-void init_color_for_tile_lines(uint8_t group, uint8_t index, const uint8_t fgCols[8], const uint8_t bgCols[8]);
+void vdp_set_tile_color(uint8_t tile_bank, uint8_t tile_index, uint8_t fg_color, uint8_t bg_color);
 
 /**
- * Initialize a hardware sprite with given pattern, color, and position.
+ * Configure color attributes per row for a given tile index.
  *
- * Writes the 8-byte sprite pattern to VRAM, sets sprite mode,
- * and updates the sprite attribute table (Y, X, pattern, color).
+ * Writes separate foreground and background color codes for each of the
+ * 8 rows in the specified color bank.
  *
- * @param spr_id  Sprite number (0–31).
- * @param pattern Pointer to 8-byte sprite pattern data.
- * @param pidx    Pattern index in sprite pattern table.
+ * @param tile_bank        Bank number (0–3)
+ * @param tile_index       Tile index (0–255)
+ * @param fg_colors        Pointer to 8 bytes: foreground color per row
+ * @param bg_colors        Pointer to 8 bytes: background color per row
  */
-void init_sprite(int spr_id, const unsigned char *pattern, unsigned char pidx);
+void vdp_set_tile_colors_per_rows(uint8_t tile_bank, uint8_t tile_index, const uint8_t fg_colors[8], const uint8_t bg_colors[8]);
 
 /**
- * Update sprite color and position.
+ * Upload both pattern and color data for a tile to VRAM in one call.
  *
- * @param spr_id  Sprite number (0–31).
- * @param pidx    Pattern index in sprite pattern table.
- * @param color   Color code for the sprite (0–15).
- * @param x       X coordinate (0–255).
- * @param y       Y coordinate (0–191).
+ * This function writes the 8-byte pattern and the 8-byte color attributes
+ * to the corresponding banks in VRAM based on the tile bank and index.
+ *
+ * @param tile_bank        Bank number (0–3)
+ * @param tile_index       Tile index (0–255)
+ * @param pattern_data     Pointer to 8 bytes of pattern data
+ * @param color_data       Pointer to 8 bytes of color attribute data
  */
-void update_sprite(int spr_id, unsigned char pidx, unsigned char color, unsigned char x, unsigned char y) ;
+void vdp_set_tile(uint8_t tile_bank, uint8_t tile_index, const uint8_t pattern_data[8], const uint8_t color_data[8]);
 
 /**
- * Writes an ASCII string to the screen in SCREEN 0/2 (Mode 0/2) using
- * the default color set by BIOS.
+ * Configure a hardware sprite with given pattern and default settings.
  *
- * @param x     Horizontal character coordinate (0‒31).
- * @param y     Vertical   character coordinate (0‒23).
- * @param text  Zero‑terminated C‑string to display.
+ * This function writes the 8-byte sprite pattern to VRAM and ensures
+ * sprites are in 8×8 pixel mode.
  *
- * The routine calculates the VRAM address of the first character in the
- * MSX Name Table (VRAM 0x1800) and sends each byte with `msx_vpoke()`.
+ * @param sprite_id        Sprite number (0–31)
+ * @param sprite_pattern   Pointer to 8-byte sprite pattern data
+ * @param pattern_index    Pattern index in the sprite pattern table
+ */
+void vdp_set_sprite(uint8_t sprite_id, const uint8_t sprite_pattern[8], uint8_t pattern_index);
+/**
+ * Update sprite attributes: pattern index, color, and position.
+ *
+ * @param sprite_id        Sprite number (0–31)
+ * @param pattern_index    Pattern index in the sprite pattern table
+ * @param color_code       Color code for the sprite (0–15)
+ * @param x_pos            X coordinate (0–255)
+ * @param y_pos            Y coordinate (0–191)
+ */
+void vdp_update_sprite(uint8_t sprite_id, uint8_t pattern_index, uint8_t color_code, uint8_t x_pos, uint8_t y_pos);
+
+/**
+ * Write a null-terminated ASCII string to the screen in Mode 0/2.
+ *
  * Only the character codes are written; color attributes remain unchanged.
+ *
+ * @param x_pos            Horizontal character coordinate (0–31)
+ * @param y_pos            Vertical character coordinate (0–23)
+ * @param text             Zero-terminated C-string to display
  */
-void put_text(unsigned char x, unsigned char y, const char *text);
+void vdp_write_text(uint8_t x_pos, uint8_t y_pos, const char *text);
 
 /**
- * Writes a number to the screen in SCREEN 0/2 (Mode 0/2) using
- * the default color set by BIOS.
+ * Write a three-digit number to the screen in Mode 0/2.
  *
- * @param x     Horizontal character coordinate (0‒31).
- * @param y     Vertical   character coordinate (0‒23).
- * @param value  integer value to display.
+ * Leading zeros are replaced with spaces.
  *
- * The routine calculates the VRAM address of the first character in the
- * MSX Name Table (VRAM 0x1800) and sends each byte with `msx_vpoke()`.
- * Only the character codes are written; color attributes remain unchanged.
+ * @param x_pos            Horizontal character coordinate (0–31)
+ * @param y_pos            Vertical character coordinate (0–23)
+ * @param number           Value to display (0–999)
  */
-void put_number(unsigned char x, unsigned char y, unsigned int value);
+void vdp_write_number(uint8_t x_pos, uint8_t y_pos, uint16_t number);
 
 /**
- * Writes an ASCII string to the screen in SCREEN 1 (Mode 1) and sets both
- * the character code and its color attribute.
+ * Write a colored ASCII string to the screen in Mode 1.
  *
- * @param x     Horizontal character coordinate (0‒31).
- * @param y     Vertical   character coordinate (0‒23).
- * @param text  Zero‑terminated C‑string to display.
- * @param fg    Foreground (ink) color 0‒15.
- * @param bg    Background (paper) color 0‒15.
+ * For each character, both the code and its color attribute are written.
  *
- * Mode 1 stores color information per character, so for each symbol the
- * routine writes two bytes:
- *   • Name  Table byte  → character code
- *   • Color Table byte → 0xBGFG (high nibble = background, low = foreground)
+ * @param x_pos            Horizontal character coordinate (0–31)
+ * @param y_pos            Vertical character coordinate (0–23)
+ * @param text             Zero-terminated C-string to display
+ * @param fg_color         Foreground (ink) color code (0–15)
+ * @param bg_color         Background (paper) color code (0–15)
  */
-void put_text_color(unsigned char x, unsigned char y, const char *text, unsigned char fg, unsigned char bg);
+void vdp_write_text_color(uint8_t x_pos, uint8_t y_pos, const char *text, uint8_t fg_color, uint8_t bg_color);
 
 #endif

@@ -37,8 +37,8 @@ compile() {
     case "$target" in
         background)
             zcc +msx -DSCREEN_MODE=2 \
-                    -create-app -subtype=rom -lmsxbios \
-                    -lmsx_clib -O3 --opt-code-speed \
+                    -create-app -subtype=rom -lmsxbios -lmsx_clib \
+                    -O3 --opt-code-speed \
                 src/$target/fps.c \
                 src/$target/main.c \
                 src/$target/sprites.c \

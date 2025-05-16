@@ -68,18 +68,18 @@ void build_tilemap(void)
 void init_tileset(void)
 {
     for (unsigned char block = 0; block < 3; ++block) {
-        init_tile(block, 0, bck_tiles[0]);
-        init_tile(block, 1, bck_tiles[1]);
-        init_tile(block, 2, bck_tiles[2]);
+        vdp_set_tile_pattern(block, 0, bck_tiles[0]);
+        vdp_set_tile_pattern(block, 1, bck_tiles[1]);
+        vdp_set_tile_pattern(block, 2, bck_tiles[2]);
     }
 }
 
 void init_colortable(void)
 {
     for (unsigned char block = 0; block < 3; ++block) {
-        init_color_for_tile(block, 0, COLOR_WHITE,    COLOR_BLACK);
-        init_color_for_tile(block, 1, COLOR_DARK_RED, COLOR_LIGHT_YELLOW);
-        init_color_for_tile(block, 2, COLOR_LIGHT_GREEN, COLOR_BLACK);
+        vdp_set_tile_color(block, 0, COLOR_WHITE,    COLOR_BLACK);
+        vdp_set_tile_color(block, 1, COLOR_DARK_RED, COLOR_LIGHT_YELLOW);
+        vdp_set_tile_color(block, 2, COLOR_LIGHT_GREEN, COLOR_BLACK);
     }
 }
 

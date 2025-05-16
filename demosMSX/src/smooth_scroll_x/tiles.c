@@ -47,18 +47,6 @@ const uint8_t bg_static[NUM_TILE_TYPES] = {
     #define MUL_TILES(id)   ((id) * NUM_TILE_TYPES)
 #endif
 
-void upload_tile_to_vram(uint8_t group, uint8_t index,
-                        const uint8_t pat[8], const uint8_t col[8])
-{
-    uint16_t off = ((uint16_t)group << 11) | ((uint16_t)index << 3);
-
-    vdp_set_address(VRAM_PATTERN_BASE + off);
-    vdp_write_bytes(pat, 8);
-
-    vdp_set_address(VRAM_COLOR_BASE + off);
-    vdp_write_bytes(col, 8);
-}
-
 void generate_animated_tileset(void)
 {
     uint8_t pat[8], col[8];
@@ -82,7 +70,7 @@ void generate_animated_tileset(void)
                 }
 
                 for (uint8_t block = 0; block < 3; ++block)
-                    upload_tile_to_vram(block, idx, pat, col);
+                    vdp_set_tile(block, idx, pat, col);
             }
         }
     }

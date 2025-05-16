@@ -35,11 +35,11 @@ void main(void) {
     unsigned int cam_y    = 0;
 
     init_fps();
-    init_screen();
+    vdp_set_screen_mode();
     init_tiles();
 
-    init_sprite(0, sprite_0, 0);
-    init_sprite(1, sprite_1, 1);
+    vdp_set_sprite(0, sprite_0, 0);
+    vdp_set_sprite(1, sprite_1, 1);
 
     while (1) {
 
@@ -120,12 +120,12 @@ void main(void) {
             cam_y = max_world_py - screen_h;
             sy1   = y1 - cam_y; 
         }
-        update_sprite(0, 0, COLOR_CYAN, sx1, sy1);
+        vdp_update_sprite(0, 0, COLOR_CYAN, sx1, sy1);
 
         x2 += dir * SPEED2;
         if (x2 > 150) dir = -1;
         if (x2 <  50) dir =  1;
-        update_sprite(1, 1, COLOR_DARK_YELLOW, x2, y2);
+        vdp_update_sprite(1, 1, COLOR_DARK_YELLOW, x2, y2);
 
         set_camera(cam_x, cam_y);
     }

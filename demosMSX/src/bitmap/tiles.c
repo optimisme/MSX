@@ -13,7 +13,7 @@ void init_tileset(void)
 
     for (unsigned char g = 0; g < 3; ++g) {
         for (unsigned int id = 0; id < 256; ++id) {
-            init_tile(g, id, PAT_PTR(g, id)); 
+            vdp_set_tile_pattern(g, id, PAT_PTR(g, id)); 
         }
     }
 }
@@ -22,7 +22,7 @@ void init_colortable(void)
 {
     for (unsigned char g = 0; g < 3; ++g) {
         for (unsigned int id = 0; id < 256; ++id) {
-            init_color_for_tile(g, id, COLOR_WHITE, COLOR_BLACK);
+            vdp_set_tile_color(g, id, COLOR_WHITE, COLOR_BLACK);
         }
     }
 }
@@ -56,7 +56,7 @@ void draw_pixel(unsigned int x, unsigned int y, unsigned char set)
     if (set) tile_patterns[idx] |=  mask;
     else     tile_patterns[idx] &= ~mask;
 
-    init_tile(group, tile_id, PAT_PTR(group, tile_id));
+    vdp_set_tile_pattern(group, tile_id, PAT_PTR(group, tile_id));
 }
 
 /**
