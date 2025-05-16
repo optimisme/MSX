@@ -19,7 +19,14 @@
  * Initialisation routines
  *   • initialize_tilesystem() – build the screen background
  */
-void init_tiles(void);
+void init_tiles_0(void);
+void init_tiles_1(void);
+void init_tiles_2(void);
+void init_tiles_3(void);
+void init_tiles_4(void);
+void init_tiles_5(void);
+void init_tiles_6(void);
+void init_tiles_7(void);
 
 /**
  * Set camera vertical position in pixels

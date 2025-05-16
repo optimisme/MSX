@@ -45,7 +45,8 @@
         "fps.h": "c",
         "set": "cpp",
         "constants.h": "c",
-        "string.h": "c"
+        "string.h": "c",
+        "loading.h": "c"
     },
     "C_Cpp.errorSquiggles": "disabled",
     "cmake.sourceDirectory": "/Users/albertpalaciosjimenez/Desktop/msx/z88dk-msx/ext/Unity"

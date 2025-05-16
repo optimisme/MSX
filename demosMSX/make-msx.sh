@@ -75,9 +75,11 @@ compile() {
             ;;
         scroll|smooth_scroll_x|smooth_scroll_y)
             zcc +msx -DSCREEN_MODE=2 \
+                     -DAMALLOC \
                      -create-app -subtype=rom -lmsxbios -lmsx_clib \
                      -O3 --opt-code-speed \
                 src/$target/fps.c \
+                src/$target/loading.c \
                 src/$target/main.c \
                 src/$target/sprites.c \
                 src/$target/tiles.c \

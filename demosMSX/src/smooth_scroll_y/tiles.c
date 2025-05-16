@@ -114,7 +114,7 @@ void build_colmap(void)
           lut[2][row] = base + 2;
           lut[3][row] = base + 3;
         }
-      }
+    }
 
     // Initialize "colmap"
     for (uint16_t y = 0; y < TILEMAP_H - 1; ++y) {
@@ -132,7 +132,7 @@ void build_colmap(void)
     uint16_t last_base = (TILEMAP_H - 1) * TILEMAP_W;
     for (uint16_t x = 0; x < TILEMAP_W; ++x) {
         uint8_t top_tile = tilemap_layer[last_base + x];
-        uint8_t bot_tile = tilemap_layer[x]; // Wrap to first row
+        uint8_t bot_tile = tilemap_layer[x]; 
         colmap[last_base + x] = mul_tiles_lut[top_tile] + bot_tile;
     }
 }
@@ -183,14 +183,29 @@ void write_buffer_to_vram(uint8_t frame)
     }
 }
 
-void init_tiles(void)
+void init_tiles_0(void)
 {
     generate_animated_tileset();
-    build_colmap();
+}
 
+void init_tiles_1(void) {}
+void init_tiles_2(void) {}
+void init_tiles_3(void) {}
+void init_tiles_4(void) {}
+
+void init_tiles_5(void)
+{
+    build_colmap();
+}
+
+void init_tiles_6(void)
+{
     for (uint8_t r = 0; r < VIEW_H; ++r)
         fill_buffer_row(r, r);
+}
 
+void init_tiles_7(void)
+{
     scroll_to(0);
 }
 
