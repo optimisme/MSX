@@ -5,7 +5,6 @@
 #define SCROLL_PIXELS_PER_FRAME (8 / NUM_SCROLL_FRAMES)
 #define FRAME_PIXEL_MASK        ((NUM_SCROLL_FRAMES * SCROLL_PIXELS_PER_FRAME) - 1)
 
-#define NUM_TILE_TYPES        5
 #define FRAME_TILEMAP_SIZE    (VIEW_W * VIEW_H)
 #define CAMERA_MAX_Y_PIXELS   ((TILEMAP_H - VIEW_H) * 8)
 
@@ -73,68 +72,9 @@ void generate_animated_tileset(void)
 void build_colmap(void)
 {
     // Generate tilemap
-    uint8_t tilemap_layer[TILEMAP_W * TILEMAP_H];
-    uint8_t t;
-    uint16_t idx = 0;
-
-    for (uint8_t y = 0; y < TILEMAP_H; ++y) {
-        for (uint8_t x = 0; x < TILEMAP_W; ++x, ++idx) {
-            t = 0;
-            if ((x == 0 || x == TILEMAP_W-1) || 
-                (y == 0 || y == TILEMAP_H-1)) {
-                t = (((x + y) % 5) == 0) ? 2 : 1;
-            } else {
-                for (uint8_t z = 16; z < 200; z += 16) {
-                    if (y == (x + z)) {
-                        if ((z % 32) == 0) {
-                            t = (y % 5) ? 2 : 3;
-                        } else {
-                            t = (y % 5) ? 2 : 4;
-                        }
-                    }
-                }
-            }
-            tilemap_layer[idx] = t;
-        }
-    }
-
-    // Initialize "mul_tiles_lut"
-    static uint8_t mul_tiles_lut[NUM_TILE_TYPES];
-    for (uint8_t i = 0; i < NUM_TILE_TYPES; ++i)
-        mul_tiles_lut[i] = MUL_TILES(i);
-
-    // Every "top/bottom" combination
-    for (uint8_t top = 0; top < NUM_TILE_TYPES; ++top) {
-        for (uint8_t bot = 0; bot < NUM_TILE_TYPES; ++bot) {
-          uint8_t row  = mul_tiles_lut[top] + bot;   // 0…24
-          uint8_t base = row << 2;                   // = row*4
-  
-          lut[0][row] = base + 0;
-          lut[1][row] = base + 1;
-          lut[2][row] = base + 2;
-          lut[3][row] = base + 3;
-        }
-    }
-
-    // Initialize "colmap"
-    for (uint16_t y = 0; y < TILEMAP_H - 1; ++y) {
-        uint16_t base = y * TILEMAP_W;
-        uint16_t next_base = (y + 1) * TILEMAP_W;
-
-        for (uint16_t x = 0; x < TILEMAP_W; ++x) {
-            uint8_t top_tile = tilemap_layer[base + x];
-            uint8_t bot_tile = tilemap_layer[next_base + x];
-            colmap[base + x] = mul_tiles_lut[top_tile] + bot_tile;
-        }
-    }
     
-    // Last row - use same tile for top and bottom or the first row's tiles as bottom
-    uint16_t last_base = (TILEMAP_H - 1) * TILEMAP_W;
-    for (uint16_t x = 0; x < TILEMAP_W; ++x) {
-        uint8_t top_tile = tilemap_layer[last_base + x];
-        uint8_t bot_tile = tilemap_layer[x]; 
-        colmap[last_base + x] = mul_tiles_lut[top_tile] + bot_tile;
-    }
+
+
 }
 
 void fill_buffer_row(uint16_t map_row, uint8_t buf_row_idx)
@@ -172,7 +112,7 @@ void write_buffer_to_vram(uint8_t frame)
         vdp_write_bytes(buf, FRAME_TILEMAP_SIZE);
     } else {
         // With rotation
-        static uint8_t full_buffer[FRAME_TILEMAP_SIZE];
+        uint8_t full_buffer[FRAME_TILEMAP_SIZE];
         uint16_t top_len = (VIEW_H - buf_first_row) * VIEW_W;
 
         memcpy(full_buffer, buf + buf_first_row * VIEW_W, top_len);
@@ -183,19 +123,81 @@ void write_buffer_to_vram(uint8_t frame)
     }
 }
 
-void init_tiles_0(void)
+void init_tiles_0()
 {
     generate_animated_tileset();
 }
 
-void init_tiles_1(void) {}
-void init_tiles_2(void) {}
-void init_tiles_3(void) {}
-void init_tiles_4(void) {}
-
-void init_tiles_5(void)
+void init_tiles_1(uint8_t *tile_type_map)
 {
-    build_colmap();
+    uint8_t t;
+    uint16_t idx = 0;
+    for (uint8_t y = 0; y < TILEMAP_H; ++y) {
+        for (uint8_t x = 0; x < TILEMAP_W; ++x, ++idx) {
+            t = 0;
+            if ((x == 0 || x == TILEMAP_W-1) || 
+                (y == 0 || y == TILEMAP_H-1)) {
+                t = (((x + y) % 5) == 0) ? 2 : 1;
+            } else {
+                for (uint8_t z = 16; z < 200; z += 16) {
+                    if (y == (x + z)) {
+                        if ((z % 32) == 0) {
+                            t = (y % 5) ? 2 : 3;
+                        } else {
+                            t = (y % 5) ? 2 : 4;
+                        }
+                    }
+                }
+            }
+            tile_type_map[idx] = t;
+        }
+    }
+}
+
+void init_tiles_2(uint8_t *tile_type_map, uint8_t *mul_tiles_lut) {
+
+    // Initialize "mul_tiles_lut"
+    for (uint8_t i = 0; i < NUM_TILE_TYPES; ++i)
+        mul_tiles_lut[i] = MUL_TILES(i);    
+}
+void init_tiles_3(uint8_t *tile_type_map, uint8_t *mul_tiles_lut) {
+
+    // Every "top/bottom" combination
+    for (uint8_t top = 0; top < NUM_TILE_TYPES; ++top) {
+        for (uint8_t bot = 0; bot < NUM_TILE_TYPES; ++bot) {
+          uint8_t row  = mul_tiles_lut[top] + bot;   // 0…24
+          uint8_t base = row << 2;                   // = row*4
+  
+          lut[0][row] = base + 0;
+          lut[1][row] = base + 1;
+          lut[2][row] = base + 2;
+          lut[3][row] = base + 3;
+        }
+    }
+}
+void init_tiles_4(uint8_t *tile_type_map, uint8_t *mul_tiles_lut) {
+    // Initialize "colmap"
+    for (uint16_t y = 0; y < TILEMAP_H - 1; ++y) {
+        uint16_t base = y * TILEMAP_W;
+        uint16_t next_base = (y + 1) * TILEMAP_W;
+
+        for (uint16_t x = 0; x < TILEMAP_W; ++x) {
+            uint8_t top_tile = tile_type_map[base + x];
+            uint8_t bot_tile = tile_type_map[next_base + x];
+            colmap[base + x] = mul_tiles_lut[top_tile] + bot_tile;
+        }
+    }
+}
+
+void init_tiles_5(uint8_t *tile_type_map, uint8_t *mul_tiles_lut)
+{
+    // Last row - use same tile for top and bottom or the first row's tiles as bottom
+    uint16_t last_base = (TILEMAP_H - 1) * TILEMAP_W;
+    for (uint16_t x = 0; x < TILEMAP_W; ++x) {
+        uint8_t top_tile = tile_type_map[last_base + x];
+        uint8_t bot_tile = tile_type_map[x]; 
+        colmap[last_base + x] = mul_tiles_lut[top_tile] + bot_tile;
+    }
 }
 
 void init_tiles_6(void)

@@ -1,13 +1,29 @@
-#include <msx.h>
-#include <stdio.h>       
-#include <video/tms99x8.h>
+#include "main.h"
 
-#include "constants.h"
-#include "fps.h"
-#include "loading.h"
-#include "sprites.h"
-#include "tiles.h"
-#include "../utils/utils_msx.h"
+void load() {
+
+    uint8_t tile_type_map[TILEMAP_W *  TILEMAP_H] = {0};
+    uint8_t mul_tiles_lut[NUM_TILE_TYPES] = {0};
+
+    loading_init(10, 11);
+    loading_draw_progress(10, 22, 12, 10);
+    init_tiles_0();
+    loading_draw_progress(10, 22, 12, 20);
+    init_tiles_1(tile_type_map);
+    loading_draw_progress(10, 22, 12, 30);
+    init_tiles_2(tile_type_map, mul_tiles_lut);
+    loading_draw_progress(10, 22, 12, 40);
+    init_tiles_3(tile_type_map, mul_tiles_lut);
+    loading_draw_progress(10, 22, 12, 50);
+    init_tiles_4(tile_type_map, mul_tiles_lut);
+    loading_draw_progress(10, 22, 12, 60);
+    init_tiles_5(tile_type_map, mul_tiles_lut);
+    loading_draw_progress(10, 22, 12, 70);
+    init_tiles_6();
+    loading_draw_progress(10, 22, 12, 80);
+    init_tiles_7();
+    loading_draw_progress(10, 22, 12, 90);
+}
 
 void main(void) {
 
@@ -26,7 +42,7 @@ void main(void) {
 
     unsigned int x2      = 50;
     unsigned int y2      = 50;
-    signed   char dir     = 1;
+    signed   char dir    = 1;
 
     unsigned char stick;
     unsigned char key;
@@ -35,25 +51,7 @@ void main(void) {
 
     init_fps();
     vdp_set_screen_mode();
-
-    loading_init(10, 11);
-    loading_draw_progress(10, 22, 12, 10);
-    init_tiles_0();
-    loading_draw_progress(10, 22, 12, 20);
-    init_tiles_1();
-    loading_draw_progress(10, 22, 12, 30);
-    init_tiles_2();
-    loading_draw_progress(10, 22, 12, 40);
-    init_tiles_3();
-    loading_draw_progress(10, 22, 12, 50);
-    init_tiles_4();
-    loading_draw_progress(10, 22, 12, 60);
-    init_tiles_5();
-    loading_draw_progress(10, 22, 12, 70);
-    init_tiles_6();
-    loading_draw_progress(10, 22, 12, 80);
-    init_tiles_7();
-    loading_draw_progress(10, 22, 12, 90);
+    load();
 
     vdp_set_sprite(0, sprite_0, 0);
     vdp_set_sprite(1, sprite_1, 1);

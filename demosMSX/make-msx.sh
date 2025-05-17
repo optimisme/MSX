@@ -75,8 +75,7 @@ compile() {
             ;;
         scroll|smooth_scroll_x|smooth_scroll_y)
             zcc +msx -DSCREEN_MODE=2 \
-                     -DAMALLOC \
-                     -create-app -subtype=rom -lmsxbios -lmsx_clib \
+                     -create-app -subtype=rom -lmsxbios \
                      -O3 --opt-code-speed \
                 src/$target/fps.c \
                 src/$target/loading.c \
