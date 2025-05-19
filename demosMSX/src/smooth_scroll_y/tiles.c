@@ -16,7 +16,7 @@ uint8_t  vdp_buffer[NUM_SCROLL_FRAMES][FRAME_TILEMAP_SIZE] = {0};
 uint8_t  buf_first_row = 0;
 uint16_t camera_tile_y = 0;
 
-uint8_t tile_map[TILEMAP_W * TILEMAP_H] = {0};
+uint8_t tilemap[TILEMAP_W * TILEMAP_H] = {0};
 uint8_t lut[NUM_SCROLL_FRAMES][NUM_TILE_TYPES*NUM_TILE_TYPES] = {0};
 uint8_t colmap[TILEMAP_W * TILEMAP_H] = {0};
 
@@ -129,7 +129,7 @@ void init_tiles_2() {
                     }
                 }
             }
-            tile_map[idx] = t;
+            tilemap[idx] = t;
         }
     }
 }
@@ -166,8 +166,8 @@ void init_tiles_5(uint8_t *mul_tiles_lut) {
         uint16_t next_base = (y + 1) * TILEMAP_W;
 
         for (uint16_t x = 0; x < TILEMAP_W; ++x) {
-            uint8_t top_tile = tile_map[base + x];
-            uint8_t bot_tile = tile_map[next_base + x];
+            uint8_t top_tile = tilemap[base + x];
+            uint8_t bot_tile = tilemap[next_base + x];
             colmap[base + x] = mul_tiles_lut[top_tile] + bot_tile;
         }
     }
@@ -178,8 +178,8 @@ void init_tiles_6(uint8_t *mul_tiles_lut)  {
     // Last row - use same tile for top and bottom or the first row's tiles as bottom
     uint16_t last_base = (TILEMAP_H - 1) * TILEMAP_W;
     for (uint16_t x = 0; x < TILEMAP_W; ++x) {
-        uint8_t top_tile = tile_map[last_base + x];
-        uint8_t bot_tile = tile_map[x]; 
+        uint8_t top_tile = tilemap[last_base + x];
+        uint8_t bot_tile = tilemap[x]; 
         colmap[last_base + x] = mul_tiles_lut[top_tile] + bot_tile;
     }
 }

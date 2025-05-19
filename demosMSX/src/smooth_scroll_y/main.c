@@ -2,7 +2,7 @@
 
 void load() {
 
-    uint8_t mul_tiles_lut[NUM_TILE_TYPES]           = {0};
+    uint8_t mul_tiles_lut[NUM_TILE_TYPES] = {0};
 
     loading_init(10, 11);
     loading_draw_progress(10, 22, 12, 10);
