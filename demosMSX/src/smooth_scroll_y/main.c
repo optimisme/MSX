@@ -2,24 +2,23 @@
 
 void load() {
 
-    uint8_t tile_type_map[TILEMAP_W * TILEMAP_H]    = {0};
     uint8_t mul_tiles_lut[NUM_TILE_TYPES]           = {0};
 
     loading_init(10, 11);
     loading_draw_progress(10, 22, 12, 10);
     init_tiles_0();
     loading_draw_progress(10, 22, 12, 20);
-    init_tiles_1(tile_type_map);
+    init_tiles_1();
     loading_draw_progress(10, 22, 12, 30);
-    init_tiles_2(tile_type_map);
+    init_tiles_2();
     loading_draw_progress(10, 22, 12, 40);
-    init_tiles_3(tile_type_map, mul_tiles_lut);
+    init_tiles_3(mul_tiles_lut);
     loading_draw_progress(10, 22, 12, 50);
-    init_tiles_4(tile_type_map, mul_tiles_lut);
+    init_tiles_4(mul_tiles_lut);
     loading_draw_progress(10, 22, 12, 60);
-    init_tiles_5(tile_type_map, mul_tiles_lut);
+    init_tiles_5(mul_tiles_lut);
     loading_draw_progress(10, 22, 12, 70);
-    init_tiles_6(tile_type_map, mul_tiles_lut);
+    init_tiles_6(mul_tiles_lut);
     loading_draw_progress(10, 22, 12, 80);
     init_tiles_7();
     loading_draw_progress(10, 22, 12, 90);

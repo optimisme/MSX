@@ -10,13 +10,15 @@
 
 #define TILEMAP_COL_SHIFT       5
 #define VIEW_COL_SHIFT          5
+#define MUL_TILES(id)           ((id) * NUM_TILE_TYPES)
 
-uint8_t vdp_buffer[NUM_SCROLL_FRAMES][FRAME_TILEMAP_SIZE];
+uint8_t  vdp_buffer[NUM_SCROLL_FRAMES][FRAME_TILEMAP_SIZE] = {0};
 uint8_t  buf_first_row = 0;
 uint16_t camera_tile_y = 0;
 
-uint8_t lut[NUM_SCROLL_FRAMES][NUM_TILE_TYPES*NUM_TILE_TYPES];
-uint8_t colmap[TILEMAP_W * TILEMAP_H];
+uint8_t tile_map[TILEMAP_W * TILEMAP_H] = {0};
+uint8_t lut[NUM_SCROLL_FRAMES][NUM_TILE_TYPES*NUM_TILE_TYPES] = {0};
+uint8_t colmap[TILEMAP_W * TILEMAP_H] = {0};
 
 const uint8_t bck_patterns[NUM_TILE_TYPES][8] = {
     {0b10000000,0b00001000,0b10000000,0b00001000,0b10000000,0b00001000,0b10000000,0b00001000},
@@ -32,16 +34,6 @@ const uint8_t fg_static[NUM_TILE_TYPES] = {
 const uint8_t bg_static[NUM_TILE_TYPES] = {
     COLOR_BLACK, COLOR_LIGHT_YELLOW, COLOR_BLACK, COLOR_CYAN, COLOR_MAGENTA
 };
-
-#if   NUM_TILE_TYPES == 2
-    #define MUL_TILES(id)   ((id) << 1)
-#elif NUM_TILE_TYPES == 3
-    #define MUL_TILES(id)   (((id) << 1) + (id))
-#elif NUM_TILE_TYPES == 4
-    #define MUL_TILES(id)   ((id) << 2)
-#else
-    #define MUL_TILES(id)   ((id) * NUM_TILE_TYPES)
-#endif
 
 void fill_buffer_row(uint16_t map_row, uint8_t buf_row_idx) {
     // Assegurem-nos que map_row està dins dels límits
@@ -91,7 +83,7 @@ void init_tiles_0(void) {
 
 }
 
-void init_tiles_1(uint8_t *tile_type_map) {
+void init_tiles_1() {
     // Generate animated tileset
     uint8_t pat[8], col[8];
 
@@ -117,7 +109,7 @@ void init_tiles_1(uint8_t *tile_type_map) {
     }
 }
 
-void init_tiles_2(uint8_t *tile_type_map) {
+void init_tiles_2() {
     uint8_t t;
     uint16_t idx = 0;
     for (uint8_t y = 0; y < TILEMAP_H; ++y) {
@@ -137,12 +129,12 @@ void init_tiles_2(uint8_t *tile_type_map) {
                     }
                 }
             }
-            tile_type_map[idx] = t;
+            tile_map[idx] = t;
         }
     }
 }
 
-void init_tiles_3(uint8_t *tile_type_map, uint8_t *mul_tiles_lut) {
+void init_tiles_3(uint8_t *mul_tiles_lut) {
 
     // Initialize "mul_tiles_lut"
     for (uint8_t i = 0; i < NUM_TILE_TYPES; ++i) {
@@ -150,7 +142,7 @@ void init_tiles_3(uint8_t *tile_type_map, uint8_t *mul_tiles_lut) {
     }
 }
 
-void init_tiles_4(uint8_t *tile_type_map, uint8_t *mul_tiles_lut) {
+void init_tiles_4(uint8_t *mul_tiles_lut) {
 
     // Every "top/bottom" combination
     for (uint8_t top = 0; top < NUM_TILE_TYPES; ++top) {
@@ -166,7 +158,7 @@ void init_tiles_4(uint8_t *tile_type_map, uint8_t *mul_tiles_lut) {
     }
 }
 
-void init_tiles_5(uint8_t *tile_type_map, uint8_t *mul_tiles_lut) {
+void init_tiles_5(uint8_t *mul_tiles_lut) {
 
     // Initialize "colmap"
     for (uint16_t y = 0; y < TILEMAP_H - 1; ++y) {
@@ -174,20 +166,20 @@ void init_tiles_5(uint8_t *tile_type_map, uint8_t *mul_tiles_lut) {
         uint16_t next_base = (y + 1) * TILEMAP_W;
 
         for (uint16_t x = 0; x < TILEMAP_W; ++x) {
-            uint8_t top_tile = tile_type_map[base + x];
-            uint8_t bot_tile = tile_type_map[next_base + x];
+            uint8_t top_tile = tile_map[base + x];
+            uint8_t bot_tile = tile_map[next_base + x];
             colmap[base + x] = mul_tiles_lut[top_tile] + bot_tile;
         }
     }
 }
 
-void init_tiles_6(uint8_t *tile_type_map, uint8_t *mul_tiles_lut)  {
+void init_tiles_6(uint8_t *mul_tiles_lut)  {
 
     // Last row - use same tile for top and bottom or the first row's tiles as bottom
     uint16_t last_base = (TILEMAP_H - 1) * TILEMAP_W;
     for (uint16_t x = 0; x < TILEMAP_W; ++x) {
-        uint8_t top_tile = tile_type_map[last_base + x];
-        uint8_t bot_tile = tile_type_map[x]; 
+        uint8_t top_tile = tile_map[last_base + x];
+        uint8_t bot_tile = tile_map[x]; 
         colmap[last_base + x] = mul_tiles_lut[top_tile] + bot_tile;
     }
 }

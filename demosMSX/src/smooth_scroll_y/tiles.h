@@ -21,12 +21,12 @@
  * Initialisation routines
  */
 void init_tiles_0(void);
-void init_tiles_1(uint8_t *tile_type_map);
-void init_tiles_2(uint8_t *tile_type_map);
-void init_tiles_3(uint8_t *tile_type_map, uint8_t *mul_tiles_lut);
-void init_tiles_4(uint8_t *tile_type_map, uint8_t *mul_tiles_lut);
-void init_tiles_5(uint8_t *tile_type_map, uint8_t *mul_tiles_lut);
-void init_tiles_6(uint8_t *tile_type_map, uint8_t *mul_tiles_lut);
+void init_tiles_1();
+void init_tiles_2();
+void init_tiles_3(uint8_t *mul_tiles_lut);
+void init_tiles_4(uint8_t *mul_tiles_lut);
+void init_tiles_5(uint8_t *mul_tiles_lut);
+void init_tiles_6(uint8_t *mul_tiles_lut);
 void init_tiles_7(void);
 
 /**
