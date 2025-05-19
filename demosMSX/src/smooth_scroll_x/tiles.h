@@ -4,18 +4,26 @@
 #include "constants.h"
 #include "../utils/utils_msx.h"
 
-#define TILEMAP_W   200     // Max 220
-#define TILEMAP_H   24      // Max 24
-#define VIEW_W      32      // 32
-#define VIEW_H      24      // Max 24
+#define NUM_TILE_TYPES  7       // Max 7
+#define TILEMAP_W       175     // Max 166
+#define TILEMAP_H       24      // 24
+#define VIEW_W          32      // 32
+#define VIEW_H          24      // Max 24
 #define TILE_LIMIT_W (TILEMAP_W - VIEW_W)
 #define TILE_LIMIT_H (TILEMAP_H - VIEW_H)
 #define VDP_BUFFER_SIZE (VIEW_W * VIEW_H)
 
 /**
  * Initialisation routines
- *   • initialize_tilesystem() – build the screen background
  */
+void init_tiles_0(void);
+void init_tiles_1();
+void init_tiles_2();
+void init_tiles_3(uint8_t *mul_tiles_lut);
+void init_tiles_4(uint8_t *mul_tiles_lut);
+void init_tiles_5(uint8_t *mul_tiles_lut);
+void init_tiles_6(uint8_t *mul_tiles_lut);
+void init_tiles_7(void);
 void init_tiles(void);
 
 /**

@@ -110,8 +110,10 @@ void init_tiles_1() {
 }
 
 void init_tiles_2() {
+    // Generate tilemap
     uint8_t t;
     uint16_t idx = 0;
+    
     for (uint8_t y = 0; y < TILEMAP_H; ++y) {
         for (uint8_t x = 0; x < TILEMAP_W; ++x, ++idx) {
             t = 0;

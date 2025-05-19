@@ -1,11 +1,7 @@
 #ifndef TILES_H
 #define TILES_H
 
-#include <stdint.h>
-#include <string.h>
-
 #include "constants.h"
-#include "main.h"
 #include "../utils/utils_msx.h"
 
 #define NUM_TILE_TYPES  5

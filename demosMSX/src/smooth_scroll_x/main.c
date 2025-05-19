@@ -1,12 +1,30 @@
-#include <msx.h>
-#include <stdio.h>       
-#include <video/tms99x8.h>
+#include "main.h"
 
-#include "constants.h"
-#include "fps.h"
-#include "sprites.h"
-#include "tiles.h"
-#include "../utils/utils_msx.h"
+void load() {
+
+    uint8_t mul_tiles_lut[NUM_TILE_TYPES] = {0};
+
+    loading_init(10, 11);
+    loading_draw_progress(10, 22, 12, 10);
+    init_tiles_0();
+    loading_draw_progress(10, 22, 12, 20);
+    init_tiles_1();
+    loading_draw_progress(10, 22, 12, 30);
+    init_tiles_2();
+    loading_draw_progress(10, 22, 12, 40);
+    init_tiles_3(mul_tiles_lut);
+    loading_draw_progress(10, 22, 12, 50);
+    init_tiles_4(mul_tiles_lut);
+    loading_draw_progress(10, 22, 12, 60);
+    init_tiles_5(mul_tiles_lut);
+    loading_draw_progress(10, 22, 12, 70);
+    init_tiles_6(mul_tiles_lut);
+    loading_draw_progress(10, 22, 12, 80);
+    init_tiles_7();
+    loading_draw_progress(10, 22, 12, 90);
+    vdp_set_sprite(0, sprite_0, 0);
+    vdp_set_sprite(1, sprite_1, 1);
+}
 
 void main(void) {
     int x1 = 80;
@@ -34,10 +52,7 @@ void main(void) {
 
     init_fps();
     vdp_set_screen_mode();
-    init_tiles();
-
-    vdp_set_sprite(0, sprite_0, 0);
-    vdp_set_sprite(1, sprite_1, 1);
+    load();
 
     while (1) {
         if (wait_fps()) continue;
