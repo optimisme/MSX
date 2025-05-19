@@ -35,37 +35,11 @@ mkdir -p "$out_dir"
 
 compile() {
     case "$target" in
-        background)
-            zcc +msx -DSCREEN_MODE=2 \
-                    -create-app -subtype=rom -lmsxbios -lmsx_clib \
-                    -O3 --opt-code-speed \
-                src/$target/fps.c \
-                src/$target/main.c \
-                src/$target/sprites.c \
-                src/$target/tiles.c \
-                src/utils/utils_msx.asm \
-                src/utils/utils_msx.c \
-                -o "$out_dir/app"
-            ;;
         bank_mapper)
             zcc +msx -create-app -subtype=rom -lmsxbios -lmsx_clib \
                      -pragma-define:MAPPER_ASCII16 \
                      -O3 --opt-code-speed \
-                src/$target/main.c \
-                src/$target/bank1.c \
-                src/$target/bank2.c \
-                -o "$out_dir/app"
-            ;;
-        bitmap)
-            zcc +msx -DSCREEN_MODE=2 \
-                     -create-app -subtype=rom -lmsxbios -lmsx_clib \
-                     -O3 --opt-code-speed \
-                src/$target/fps.c \
-                src/$target/main.c \
-                src/$target/sprites.c \
-                src/$target/tiles.c \
-                src/utils/utils_msx.asm \
-                src/utils/utils_msx.c \
+                src/$target/*.c \
                 -o "$out_dir/app"
             ;;
         hello)
@@ -73,17 +47,13 @@ compile() {
                 "src/$target/main.c" \
                 -o "$out_dir/app"
             ;;
-        scroll|smooth_scroll_x|smooth_scroll_y)
+        background|bitmap|scroll|smooth_scroll_x|smooth_scroll_y)
             zcc +msx -DSCREEN_MODE=2 \
                      -create-app -subtype=rom -lmsxbios \
                      -O3 --opt-code-speed \
-                src/$target/fps.c \
-                src/$target/loading.c \
-                src/$target/main.c \
-                src/$target/sprites.c \
-                src/$target/tiles.c \
-                src/utils/utils_msx.asm \
-                src/utils/utils_msx.c \
+                src/$target/*.c \
+                src/utils/*.asm \
+                src/utils/*.c \
                 -o "$out_dir/app"
             ;;
         *)
