@@ -28,3 +28,5 @@ bin/*
 
 # Compiler
 z88dk-msx/
+*.rom
+*.bin
