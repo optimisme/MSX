@@ -5,11 +5,11 @@
 #define SCROLL_PIXELS_PER_FRAME (8 / NUM_SCROLL_FRAMES)
 #define FRAME_PIXEL_MASK        ((NUM_SCROLL_FRAMES * SCROLL_PIXELS_PER_FRAME) - 1)
 
-#define FRAME_TILEMAP_SIZE    (VIEW_W * VIEW_H)
-#define CAMERA_MAX_Y_PIXELS   ((TILEMAP_H - VIEW_H) * 8)
+#define FRAME_TILEMAP_SIZE      (VIEW_W * VIEW_H)
+#define CAMERA_MAX_Y_PIXELS     ((TILEMAP_H - VIEW_H) * 8)
 
-#define TILEMAP_COL_SHIFT     5
-#define VIEW_COL_SHIFT        5
+#define TILEMAP_COL_SHIFT       5
+#define VIEW_COL_SHIFT          5
 
 uint8_t vdp_buffer[NUM_SCROLL_FRAMES][FRAME_TILEMAP_SIZE];
 uint8_t  buf_first_row = 0;
@@ -43,8 +43,56 @@ const uint8_t bg_static[NUM_TILE_TYPES] = {
     #define MUL_TILES(id)   ((id) * NUM_TILE_TYPES)
 #endif
 
-void generate_animated_tileset(void)
-{
+void fill_buffer_row(uint16_t map_row, uint8_t buf_row_idx) {
+    // Assegurem-nos que map_row està dins dels límits
+    if (map_row >= TILEMAP_H)
+        map_row = TILEMAP_H - 1;
+    
+    uint16_t buffer_offset = buf_row_idx * VIEW_W;
+    uint8_t *b0 = &vdp_buffer[0][buffer_offset];
+    uint8_t *b1 = &vdp_buffer[1][buffer_offset];
+    uint8_t *b2 = &vdp_buffer[2][buffer_offset];
+    uint8_t *b3 = &vdp_buffer[3][buffer_offset];
+
+    // First column pointer for this row
+    uint16_t map_offset = map_row * TILEMAP_W;
+    uint8_t *cp = &colmap[map_offset];
+
+    for (uint8_t x = 0; x < VIEW_W; ++x) {
+        uint8_t col = *cp++;         
+        b0[x] = lut[0][col];   
+        b1[x] = lut[1][col];
+        b2[x] = lut[2][col];
+        b3[x] = lut[3][col];
+    }
+}
+
+void write_buffer_to_vram(uint8_t frame) {
+    uint8_t *buf = vdp_buffer[frame];
+
+    if (buf_first_row == 0) {
+        // Without rotation
+        vdp_set_address(NAME_TABLE);
+        vdp_write_bytes(buf, FRAME_TILEMAP_SIZE);
+    } else {
+        // With rotation
+        uint8_t full_buffer[FRAME_TILEMAP_SIZE];
+        uint16_t top_len = (VIEW_H - buf_first_row) * VIEW_W;
+
+        memcpy(full_buffer, buf + buf_first_row * VIEW_W, top_len);
+        memcpy(full_buffer + top_len, buf, buf_first_row * VIEW_W);
+
+        vdp_set_address(NAME_TABLE);
+        vdp_write_bytes(full_buffer, FRAME_TILEMAP_SIZE);
+    }
+}
+
+void init_tiles_0(void) {
+
+}
+
+void init_tiles_1(uint8_t *tile_type_map) {
+    // Generate animated tileset
     uint8_t pat[8], col[8];
 
     for (uint8_t top = 0; top < NUM_TILE_TYPES; ++top) {
@@ -69,67 +117,7 @@ void generate_animated_tileset(void)
     }
 }
 
-void build_colmap(void)
-{
-    // Generate tilemap
-    
-
-
-}
-
-void fill_buffer_row(uint16_t map_row, uint8_t buf_row_idx)
-{
-    // Assegurem-nos que map_row està dins dels límits
-    if (map_row >= TILEMAP_H)
-        map_row = TILEMAP_H - 1;
-    
-    uint16_t buffer_offset = buf_row_idx * VIEW_W;
-    uint8_t *b0 = &vdp_buffer[0][buffer_offset];
-    uint8_t *b1 = &vdp_buffer[1][buffer_offset];
-    uint8_t *b2 = &vdp_buffer[2][buffer_offset];
-    uint8_t *b3 = &vdp_buffer[3][buffer_offset];
-
-    // First column pointer for this row
-    uint16_t map_offset = map_row * TILEMAP_W;
-    uint8_t *cp = &colmap[map_offset];
-
-    for (uint8_t x = 0; x < VIEW_W; ++x) {
-        uint8_t col = *cp++;         
-        b0[x] = lut[0][col];   
-        b1[x] = lut[1][col];
-        b2[x] = lut[2][col];
-        b3[x] = lut[3][col];
-    }
-}
-
-void write_buffer_to_vram(uint8_t frame)
-{
-    uint8_t *buf = vdp_buffer[frame];
-
-    if (buf_first_row == 0) {
-        // Without rotation
-        vdp_set_address(NAME_TABLE);
-        vdp_write_bytes(buf, FRAME_TILEMAP_SIZE);
-    } else {
-        // With rotation
-        uint8_t full_buffer[FRAME_TILEMAP_SIZE];
-        uint16_t top_len = (VIEW_H - buf_first_row) * VIEW_W;
-
-        memcpy(full_buffer, buf + buf_first_row * VIEW_W, top_len);
-        memcpy(full_buffer + top_len, buf, buf_first_row * VIEW_W);
-
-        vdp_set_address(NAME_TABLE);
-        vdp_write_bytes(full_buffer, FRAME_TILEMAP_SIZE);
-    }
-}
-
-void init_tiles_0()
-{
-    generate_animated_tileset();
-}
-
-void init_tiles_1(uint8_t *tile_type_map)
-{
+void init_tiles_2(uint8_t *tile_type_map) {
     uint8_t t;
     uint16_t idx = 0;
     for (uint8_t y = 0; y < TILEMAP_H; ++y) {
@@ -154,13 +142,15 @@ void init_tiles_1(uint8_t *tile_type_map)
     }
 }
 
-void init_tiles_2(uint8_t *tile_type_map, uint8_t *mul_tiles_lut) {
+void init_tiles_3(uint8_t *tile_type_map, uint8_t *mul_tiles_lut) {
 
     // Initialize "mul_tiles_lut"
-    for (uint8_t i = 0; i < NUM_TILE_TYPES; ++i)
-        mul_tiles_lut[i] = MUL_TILES(i);    
+    for (uint8_t i = 0; i < NUM_TILE_TYPES; ++i) {
+        mul_tiles_lut[i] = MUL_TILES(i);
+    }
 }
-void init_tiles_3(uint8_t *tile_type_map, uint8_t *mul_tiles_lut) {
+
+void init_tiles_4(uint8_t *tile_type_map, uint8_t *mul_tiles_lut) {
 
     // Every "top/bottom" combination
     for (uint8_t top = 0; top < NUM_TILE_TYPES; ++top) {
@@ -175,7 +165,9 @@ void init_tiles_3(uint8_t *tile_type_map, uint8_t *mul_tiles_lut) {
         }
     }
 }
-void init_tiles_4(uint8_t *tile_type_map, uint8_t *mul_tiles_lut) {
+
+void init_tiles_5(uint8_t *tile_type_map, uint8_t *mul_tiles_lut) {
+
     // Initialize "colmap"
     for (uint16_t y = 0; y < TILEMAP_H - 1; ++y) {
         uint16_t base = y * TILEMAP_W;
@@ -189,8 +181,8 @@ void init_tiles_4(uint8_t *tile_type_map, uint8_t *mul_tiles_lut) {
     }
 }
 
-void init_tiles_5(uint8_t *tile_type_map, uint8_t *mul_tiles_lut)
-{
+void init_tiles_6(uint8_t *tile_type_map, uint8_t *mul_tiles_lut)  {
+
     // Last row - use same tile for top and bottom or the first row's tiles as bottom
     uint16_t last_base = (TILEMAP_H - 1) * TILEMAP_W;
     for (uint16_t x = 0; x < TILEMAP_W; ++x) {
@@ -200,19 +192,16 @@ void init_tiles_5(uint8_t *tile_type_map, uint8_t *mul_tiles_lut)
     }
 }
 
-void init_tiles_6(void)
-{
+void init_tiles_7(void) {
+
     for (uint8_t r = 0; r < VIEW_H; ++r)
         fill_buffer_row(r, r);
-}
 
-void init_tiles_7(void)
-{
     scroll_to(0);
 }
 
-void scroll_to(unsigned int cam_y)
-{
+void scroll_to(unsigned int cam_y) {
+
     if (cam_y > CAMERA_MAX_Y_PIXELS) cam_y = CAMERA_MAX_Y_PIXELS;
     uint8_t disp  = (cam_y % (NUM_SCROLL_FRAMES * SCROLL_PIXELS_PER_FRAME)) / SCROLL_PIXELS_PER_FRAME;
     uint8_t frame = (cam_y & FRAME_PIXEL_MASK) / SCROLL_PIXELS_PER_FRAME;

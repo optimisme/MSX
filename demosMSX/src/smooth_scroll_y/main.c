@@ -2,8 +2,8 @@
 
 void load() {
 
-    uint8_t tile_type_map[TILEMAP_W *  TILEMAP_H] = {0};
-    uint8_t mul_tiles_lut[NUM_TILE_TYPES] = {0};
+    uint8_t tile_type_map[TILEMAP_W * TILEMAP_H]    = {0};
+    uint8_t mul_tiles_lut[NUM_TILE_TYPES]           = {0};
 
     loading_init(10, 11);
     loading_draw_progress(10, 22, 12, 10);
@@ -11,7 +11,7 @@ void load() {
     loading_draw_progress(10, 22, 12, 20);
     init_tiles_1(tile_type_map);
     loading_draw_progress(10, 22, 12, 30);
-    init_tiles_2(tile_type_map, mul_tiles_lut);
+    init_tiles_2(tile_type_map);
     loading_draw_progress(10, 22, 12, 40);
     init_tiles_3(tile_type_map, mul_tiles_lut);
     loading_draw_progress(10, 22, 12, 50);
@@ -19,10 +19,12 @@ void load() {
     loading_draw_progress(10, 22, 12, 60);
     init_tiles_5(tile_type_map, mul_tiles_lut);
     loading_draw_progress(10, 22, 12, 70);
-    init_tiles_6();
+    init_tiles_6(tile_type_map, mul_tiles_lut);
     loading_draw_progress(10, 22, 12, 80);
     init_tiles_7();
     loading_draw_progress(10, 22, 12, 90);
+    vdp_set_sprite(0, sprite_0, 0);
+    vdp_set_sprite(1, sprite_1, 1);
 }
 
 void main(void) {
@@ -52,9 +54,6 @@ void main(void) {
     init_fps();
     vdp_set_screen_mode();
     load();
-
-    vdp_set_sprite(0, sprite_0, 0);
-    vdp_set_sprite(1, sprite_1, 1);
 
     while (1) {
 
