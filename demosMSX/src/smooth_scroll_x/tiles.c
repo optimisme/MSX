@@ -87,7 +87,7 @@ void write_buffer_to_vram(uint8_t frame)
     }
 }
 
-void init_tiles_0(void) {
+void init_tiles_0() {
 
 }
 
@@ -194,7 +194,7 @@ void init_tiles_5(uint8_t *mul_tiles_lut) {
 
 void init_tiles_6(uint8_t *mul_tiles_lut)  { }
 
-void init_tiles_7(void) {
+void init_tiles_7() {
 
     for (uint8_t c = 0; c < VIEW_W; ++c)
         fill_buffer_col(c, c);
