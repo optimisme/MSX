@@ -51,7 +51,7 @@ void main(void) {
     unsigned int cam_x = 0;
 
     init_fps();
-    vdp_set_screen_mode();
+    vdp_set_screen_mode(2);
     load();
 
     while (1) {

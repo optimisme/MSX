@@ -13,7 +13,7 @@ machine_param="$3"
 
 # Comprovació d'ús
 if [ "$#" -lt 2 ] || [ "$#" -gt 3 ]; then
-    echo "Usage:    $0 {compile|run} {background|bank_mapper|bitmap|hello|scroll|smooth_scroll_x|smooth_scroll_y} [phillips]"
+    echo "Usage:    $0 {compile|run} {minigames} [phillips]"
     echo "Examples: $0 compile scroll"
     echo "          $0 run scroll phillips"
     exit 1
@@ -35,22 +35,22 @@ mkdir -p "$out_dir"
 
 compile() {
     case "$target" in
-        bank_mapper)
-            zcc +msx -create-app -subtype=rom -lmsxbios -lmsx_clib \
-                     -pragma-define:MAPPER_ASCII16 \
-                     -O3 --opt-code-speed \
+        minigames)
+            cd assets
+            python transform_bitmap.py menu_bitmap.png
+            rm -f ../src/minigames/menu/menu_bitmap.*
+            cp -f menu_bitmap.h ../src/minigames/menu/
+            cp -f menu_bitmap.c ../src/minigames/menu/
+            # python transform_alpha.py alpha.png
+            # cp -f alpha.h ../src/utils/
+            # cp -f alpha.c ../src/utils/
+            cd ..
+            zcc +msx \
+                    -create-app -subtype=rom -lmsxbios \
+                    -pragma-define:MAPPER_ASCII16 \
+                    -O3 --opt-code-speed \
                 src/$target/*.c \
-                -o "$out_dir/app"
-            ;;
-        hello)
-            zcc +msx -create-app -subtype=rom -lmsxbios \
-                "src/$target/main.c" \
-                -o "$out_dir/app"
-            ;;
-        background|bitmap|scroll|smooth_scroll_x|smooth_scroll_y)
-            zcc +msx -create-app -subtype=rom -lmsxbios \
-                     -O3 --opt-code-speed \
-                src/$target/*.c \
+                src/$target/*/*.c \
                 src/utils/*.asm \
                 src/utils/*.c \
                 -o "$out_dir/app"

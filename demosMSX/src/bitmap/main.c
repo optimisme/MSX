@@ -36,7 +36,7 @@ void main(void) {
     unsigned int cam_y    = 0;
 
     init_fps();
-    vdp_set_screen_mode();
+    vdp_set_screen_mode(2);
     init_tileset();
     init_colortable();
     init_tilemap();

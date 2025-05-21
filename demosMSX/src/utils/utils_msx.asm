@@ -10,7 +10,7 @@ _vdp_set_address:
     ld a, h
     or 0x40              
     out (CRTL_PORT), a
-    REPT 8
+    REPT 12
       nop
     ENDR
     ret

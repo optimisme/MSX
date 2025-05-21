@@ -17,7 +17,7 @@ void loading_init(uint8_t tile_x, uint8_t tile_y) {
     // Empty tilemap
     for (unsigned char y = 0; y < 24; ++y) {
         for (unsigned char x = 0; x < 32; ++x) {
-            msx_vpoke(NAME_TABLE + y * 32 + x, LOADING_BACK);
+            msx_vpoke(MODE_2_TILEMAP_BASE + y * 32 + x, LOADING_BACK);
         }
     }
 
@@ -47,11 +47,11 @@ void loading_init(uint8_t tile_x, uint8_t tile_y) {
 
     // Set "LOADING..." text tiles
     int pos = tile_x + tile_y * 32;
-    msx_vpoke(NAME_TABLE + pos + 0, LOADING_PART_0);
-    msx_vpoke(NAME_TABLE + pos + 1, LOADING_PART_1);
-    msx_vpoke(NAME_TABLE + pos + 2, LOADING_PART_2);
-    msx_vpoke(NAME_TABLE + pos + 3, LOADING_PART_3);
-    msx_vpoke(NAME_TABLE + pos + 4, LOADING_PART_4);
+    msx_vpoke(MODE_2_TILEMAP_BASE + pos + 0, LOADING_PART_0);
+    msx_vpoke(MODE_2_TILEMAP_BASE + pos + 1, LOADING_PART_1);
+    msx_vpoke(MODE_2_TILEMAP_BASE + pos + 2, LOADING_PART_2);
+    msx_vpoke(MODE_2_TILEMAP_BASE + pos + 3, LOADING_PART_3);
+    msx_vpoke(MODE_2_TILEMAP_BASE + pos + 4, LOADING_PART_4);
 }
 
 /**
@@ -75,6 +75,6 @@ void loading_draw_progress(uint8_t tile_start, uint8_t tile_end, uint8_t tile_y,
     for (uint8_t x = tile_start; x < tile_end; ++x) {
         /* if this tile is within the filled count, use 2, else 1 */
         uint8_t value = (x - tile_start < filled) ?  LOADING_BAR_FULL :  LOADING_BAR_EMPTY;
-        msx_vpoke(NAME_TABLE + tile_y * 32 + x, value);
+        msx_vpoke(MODE_2_TILEMAP_BASE + tile_y * 32 + x, value);
     }
 }

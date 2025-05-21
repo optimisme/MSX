@@ -37,7 +37,7 @@ void init_tilemap(void) {
         }
     }
     
-    vdp_set_address(NAME_TABLE);
+    vdp_set_address(MODE_2_TILEMAP_BASE);
     vdp_blast_tilemap(vdp_buffer);
 }
 

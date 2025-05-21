@@ -108,6 +108,6 @@ void set_camera(unsigned int cam_x, unsigned int cam_y) {
         memcpy(&vdp_buffer[y * VIEW_W], src, VIEW_W);
     }  
 
-    vdp_set_address(NAME_TABLE);
+    vdp_set_address(MODE_2_TILEMAP_BASE);
     vdp_blast_tilemap(vdp_buffer);
 }

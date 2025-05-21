@@ -67,7 +67,7 @@ void write_buffer_to_vram(uint8_t frame)
     
     if (buf_first_col == 0) {
         // Without rotation
-        vdp_set_address(NAME_TABLE);
+        vdp_set_address(MODE_2_TILEMAP_BASE);
         vdp_write_bytes(buf, FRAME_TILEMAP_SIZE);
     } else {
         // With rotation
@@ -82,7 +82,7 @@ void write_buffer_to_vram(uint8_t frame)
             memcpy(full_buffer + row_start + right_len, buf + source_offset, buf_first_col);
         }
         
-        vdp_set_address(NAME_TABLE);
+        vdp_set_address(MODE_2_TILEMAP_BASE);
         vdp_write_bytes(full_buffer, FRAME_TILEMAP_SIZE);
     }
 }

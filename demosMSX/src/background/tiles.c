@@ -71,8 +71,8 @@ void init_tilemap(void)
             if (x == 0 || x == 31 || y == 0 || y == 23)
                 tile = 1;
 
-            /* NAME_TABLE starts at 0x1800 (see constants_msx.h) */
-            msx_vpoke(NAME_TABLE + y * 32 + x, tile);
+            /* MODE_2_TILEMAP_BASE starts at 0x1800 (see constants_msx.h) */
+            msx_vpoke(MODE_2_TILEMAP_BASE + y * 32 + x, tile);
         }
     }
 }
