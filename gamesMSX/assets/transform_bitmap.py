@@ -9,7 +9,10 @@ Advanced tile transformer:
 import sys
 import os
 import re
+import argparse
 from PIL import Image
+
+bit_threshold = 100
 
 def sanitize_identifier(name):
     """
@@ -22,10 +25,11 @@ def sanitize_identifier(name):
     return s
 
 
-def generate_header(base, ident, rows, cols, tile_bytes, tile_count, out_h):
+def generate_header(base, ident, rows, cols, tile_bytes, tile_count, out_h, pragma_bank=None):
     guard = f"{ident.upper()}_H"
     lines = []
-    lines.append(f"#pragma bank 1")
+    if pragma_bank is not None:
+        lines.append(f"#pragma bank {pragma_bank}")
     lines.append(f"#ifndef {guard}")
     lines.append(f"#define {guard}")
     lines.append("")
@@ -76,12 +80,23 @@ def generate_source(base, ident, tileset, tilemap, out_c, header_file):
     with open(out_c, 'w') as f:
         f.write("\n".join(lines))
 
-def main():
-    if len(sys.argv) != 2:
-        print(f"Usage: {os.path.basename(sys.argv[0])} <input_image>")
-        sys.exit(1)
 
-    input_path = sys.argv[1]
+def main():
+    parser = argparse.ArgumentParser(
+        description="Split an image into tileset and tilemap with optional pragma bank"
+    )
+    parser.add_argument(
+        '--pragma', '-p',
+        type=int,
+        help='Optional pragma bank number to add to the header file'
+    )
+    parser.add_argument(
+        'input_image',
+        help='Path to the input image (must be multiples of 8 in both dimensions)'
+    )
+    args = parser.parse_args()
+
+    input_path = args.input_image
     base = os.path.splitext(os.path.basename(input_path))[0]
     ident = sanitize_identifier(base)
     out_h = f"{base}.h"
@@ -114,7 +129,7 @@ def main():
                 byte = 0
                 for x in range(8):
                     px = pixels[c*8 + x, r*8 + y]
-                    bit = 1 if px > 127 else 0
+                    bit = 1 if px > bit_threshold else 0
                     byte = (byte << 1) | bit
                 data.append(byte)
             key = tuple(data)
@@ -123,8 +138,8 @@ def main():
                 tileset.append(key)
             tilemap[r][c] = tile_dict[key]
 
-    # Generate outputs
-    generate_header(base, ident, rows, cols, 8, len(tileset), out_h)
+    # Generate outputs with optional pragma
+    generate_header(base, ident, rows, cols, 8, len(tileset), out_h, args.pragma)
     generate_source(base, ident, tileset, tilemap, out_c, out_h)
 
     print(f"Generated tileset with {len(tileset)} unique tiles.")

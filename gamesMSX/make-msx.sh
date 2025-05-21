@@ -37,7 +37,7 @@ compile() {
     case "$target" in
         minigames)
             cd assets
-            python transform_bitmap.py menu_bitmap.png
+            python transform_bitmap.py menu_bitmap.png --pragma 1
             rm -f ../src/minigames/menu/menu_bitmap.*
             cp -f menu_bitmap.h ../src/minigames/menu/
             cp -f menu_bitmap.c ../src/minigames/menu/
