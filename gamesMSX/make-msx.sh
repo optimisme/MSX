@@ -41,6 +41,10 @@ compile() {
             rm -f ../src/minigames/menu/menu_bitmap.*
             cp -f menu_bitmap.h ../src/minigames/menu/
             cp -f menu_bitmap.c ../src/minigames/menu/
+            python transform_bitmap.py g2048_bitmap.png --pragma 2
+            rm -f ../src/minigames/menu/g2048_bitmap.*
+            cp -f g2048_bitmap.h ../src/minigames/g2048/
+            cp -f g2048_bitmap.c ../src/minigames/g2048/
             # python transform_alpha.py alpha.png
             # cp -f alpha.h ../src/utils/
             # cp -f alpha.c ../src/utils/

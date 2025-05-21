@@ -17,7 +17,7 @@ void flush_keyboard(void) {
 }
 
 void main(void) {
-
+    
     uint8_t selected_menu_option = 1;
     uint8_t selected_bank = 1;
 
@@ -32,7 +32,7 @@ void main(void) {
 
         } else if (selected_bank == 2) {
 
-            bank2_content();
+            main_g2048();
             selected_menu_option = 1;
             selected_bank = 1;
 

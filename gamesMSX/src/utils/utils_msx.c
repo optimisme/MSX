@@ -6,7 +6,12 @@
  * This function sets the MSX video mode and, if using Mode 2,
  * forces the pattern and color table bases to the correct VRAM addresses.
  */
+uint current_screen_mode = 0xFF;
 void vdp_set_screen_mode(uint8_t value) {
+
+    if (current_screen_mode == value) return;
+    current_screen_mode = value;
+
     // Switch to the defined screen mode
     msx_screen(value);
 

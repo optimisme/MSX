@@ -54,7 +54,9 @@
         "menu.h": "c",
         "menu_bitmap.h": "c",
         "buffers.h": "c",
-        "malloc.h": "c"
+        "malloc.h": "c",
+        "2048_game.h": "c",
+        "g2048_bitmap.h": "c"
     },
     "C_Cpp.errorSquiggles": "disabled",
     "cmake.sourceDirectory": "/Users/albertpalaciosjimenez/Desktop/msx/z88dk-msx/ext/Unity"

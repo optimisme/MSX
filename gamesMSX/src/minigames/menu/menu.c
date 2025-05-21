@@ -48,26 +48,27 @@ void main_menu(uint8_t selected_menu_option, uint8_t *out) __banked {
 
         if (wait_fps()) continue;
         
-        draw_menu();
+        update_menu();
         
         b_stick = msx_get_stick(0);
 
         if (kbhit()) {
+            uint8_t leave = 0;
             b_key = cgetc();
             if (b_key == ' ' || b_key == '\n') {
-                *out = b_option + 1;
-                return;
+                leave = b_option + 1;
             } else if (b_key == '1') {
-                *out = 2;
-                return;
+                leave = 2;
             } else if (b_key == '2') {
-                *out = 3;
-                return;
+                leave = 3;
             } else if (b_key == '3') {
-                *out = 4;
-                return;
+                leave = 4;
             } else if (b_key == '4') {
-                *out = 5;
+                leave = 5;
+            }
+            if (leave != 0) {
+                vdp_update_sprite(0, 0, 0, 0, 208);
+                *out = leave;
                 return;
             }
         }
@@ -114,6 +115,7 @@ void main_menu(uint8_t selected_menu_option, uint8_t *out) __banked {
 
 void init_menu(void) __banked {
 
+    // Set tilemap to blank
     vdp_set_screen_mode(2);
     vdp_set_address(MODE_2_TILEMAP_BASE);
     vdp_blast_tilemap(vdp_tilemap_buff);
@@ -215,7 +217,7 @@ void update_cursor_animation(void) __banked {
     }
 }
 
-void draw_menu() __banked {
+void update_menu() __banked {
     update_cursor_animation();
     vdp_update_sprite(0, 0, COLOR_CYAN, b_cursor_x, b_cursor_y);
 }
