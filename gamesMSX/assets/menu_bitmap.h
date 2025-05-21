@@ -7,7 +7,7 @@
 #define MENU_BITMAP_MAP_ROWS 24
 #define MENU_BITMAP_MAP_COLUMNS 32
 #define MENU_BITMAP_TILE_BYTES 8
-#define MENU_BITMAP_TILE_COUNT 148
+#define MENU_BITMAP_TILE_COUNT 146
 
 extern const uint8_t menu_bitmap_tileset[MENU_BITMAP_TILE_COUNT][MENU_BITMAP_TILE_BYTES];
 extern const uint8_t menu_bitmap_tilemap[MENU_BITMAP_MAP_ROWS * MENU_BITMAP_MAP_COLUMNS];

@@ -61,6 +61,10 @@
 #define COLOR_GRAY              14
 #define COLOR_WHITE             15
 
+extern void suspend_interrupts(void) __z88dk_callee;
+extern void resume_interrupts(void) __z88dk_callee;
+extern void do_nop(void) __z88dk_callee;
+
 /**
  * Sets the VDP write address to prepare for sequential VRAM output.
  *

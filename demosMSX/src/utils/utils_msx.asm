@@ -58,3 +58,18 @@ vbt_loop:
     or e                 
     jp nz, vbt_loop
     ret
+
+PUBLIC _suspend_interrupts
+_suspend_interrupts:
+    di
+    ret
+
+PUBLIC _resume_interrupts
+_resume_interrupts:
+    ei
+    ret
+
+PUBLIC _do_nop
+_do_nop:
+    nop
+    ret

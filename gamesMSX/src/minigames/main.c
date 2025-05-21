@@ -6,9 +6,14 @@
 #include "../utils/fps.h"
 
 void flush_keyboard(void) {
-    for (uint8_t x = 0; x < 50; x++){ 
-        while (kbhit()) cgetc();
+    suspend_interrupts();
+    for (int x = 0; x < 500; x++){ 
+        while (kbhit()) {
+            cgetc();
+            do_nop();
+        }
     }
+    resume_interrupts();
 }
 
 void main(void) {
