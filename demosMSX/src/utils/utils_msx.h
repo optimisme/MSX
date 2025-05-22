@@ -32,6 +32,13 @@
 #define VDP_DATA_PORT           0x98
 #define VDP_CTRL_PORT           0x99
 
+// Sprites
+#define SPRITE_MAGNIFY_BIT  (1 << 0)  // bit 0: 0 = normal, 1 = magnify 2×
+#define SPRITE_SIZE_BIT     (1 << 1)  // bit 1: 0 = 8×8, 1 = 16×16
+#define SPRITE_VBLANK_BIT   (1 << 5)  // bit 5: enable V-Blank interrupt
+#define SPRITE_DISPLAY_BIT  (1 << 6)  // bit 6: 1 = display on, 0 = blank
+#define SPRITE_VRAM16K_BIT  (1 << 7)  // bit 7: 1 = 16 KB VRAM, 0 = 4 KB VRAM
+
 // Stick values
 #define STICK_NONE              0
 #define STICK_UP                1
@@ -176,6 +183,14 @@ void vdp_set_tile_colors_per_rows(uint8_t tile_bank, uint8_t tile_index, const u
  * @param color_data       Pointer to 8 bytes of color attribute data
  */
 void vdp_set_tile(uint8_t tile_bank, uint8_t tile_index, const uint8_t pattern_data[8], const uint8_t color_data[8]);
+
+/**
+ * Configure sprite size and magnification in VDP register 1.
+ *
+ * @param is_magnified   true = enable 2× magnification, false = normal size
+ * @param is_double      true = use 16×16 sprites, false = use 8×8 sprites
+ */
+void set_sprites_config(bool is_magnified, bool is_double);
 
 /**
  * Configure a hardware sprite with given pattern and default settings.

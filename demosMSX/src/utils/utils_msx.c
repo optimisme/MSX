@@ -125,6 +125,32 @@ void vdp_set_tile(uint8_t tile_bank,
 }
 
 /**
+ * Configure sprite size and magnification in VDP register 1.
+ *
+ * @param is_magnified   true = enable 2× magnification, false = normal size
+ * @param is_double      true = use 16×16 sprites, false = use 8×8 sprites
+ */
+void set_sprites_config(bool is_magnified, bool is_double) {
+    uint8_t r1 = vdp_get_reg(1);
+
+    // clear both the SIZE and MAGNIFY bits
+    r1 &= ~(SPRITE_SIZE_BIT | SPRITE_MAGNIFY_BIT);
+
+    // set SIZE bit if requesting 16×16 sprites
+    if (is_double) {
+        r1 |= SPRITE_SIZE_BIT;
+    }
+
+    // set MAGNIFY bit if requesting 2× magnification
+    if (is_magnified) {
+        r1 |= SPRITE_MAGNIFY_BIT;
+    }
+
+    // write back the modified register value
+    vdp_set_reg(1, r1);
+}
+
+/**
  * Configure a hardware sprite with given pattern and default settings.
  *
  * This function writes the 8-byte sprite pattern to VRAM and ensures

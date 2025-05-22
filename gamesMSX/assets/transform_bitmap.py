@@ -12,7 +12,7 @@ import re
 import argparse
 from PIL import Image
 
-bit_threshold = 100
+BIT_THRESHOLD = 100
 
 def sanitize_identifier(name):
     """
@@ -129,7 +129,7 @@ def main():
                 byte = 0
                 for x in range(8):
                     px = pixels[c*8 + x, r*8 + y]
-                    bit = 1 if px > bit_threshold else 0
+                    bit = 1 if px > BIT_THRESHOLD else 0
                     byte = (byte << 1) | bit
                 data.append(byte)
             key = tuple(data)
