@@ -47,12 +47,11 @@ void main_menu(uint8_t selected_menu_option, uint8_t *out) __banked {
     while (1) {
 
         if (wait_fps()) continue;
-        
         update_menu();
         
         b_stick = msx_get_stick(0);
 
-        if (kbhit()) {
+        if (kbhit()) {   
             uint8_t leave = 0;
             b_key = cgetc();
             if (b_key == ' ' || b_key == '\n') {
@@ -67,7 +66,6 @@ void main_menu(uint8_t selected_menu_option, uint8_t *out) __banked {
                 leave = 5;
             }
             if (leave != 0) {
-                vdp_update_sprite(0, 0, 0, 0, 208);
                 *out = leave;
                 return;
             }

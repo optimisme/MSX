@@ -4,6 +4,7 @@
 #include "banks.h"
 #include "buffers.h"
 #include "../utils/fps.h"
+#include "../utils/random.h"
 
 void flush_keyboard(void) {
     suspend_interrupts();
@@ -17,7 +18,7 @@ void flush_keyboard(void) {
 }
 
 void main(void) {
-    
+
     uint8_t selected_menu_option = 1;
     uint8_t selected_bank = 1;
 

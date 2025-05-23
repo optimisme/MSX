@@ -1,20 +1,20 @@
 #include "fps.h"
 
-unsigned char frames_to_wait;
-unsigned int current_jiffy;
-unsigned int prev_jiffy;
-unsigned char is_pal;
+FPS_t fps_buff[1];
 
 void init_fps(void) {
-    is_pal = (*SYSFLAGS) & 0x80;  // bit 7 = 1 → PAL
-    frames_to_wait = is_pal ? (50 / TARGET_FPS) : (60 / TARGET_FPS);
-    prev_jiffy = *JIFFY;
+    fps_is_pal = SYSFLAGS & 0x80;  // bit 7 = 1 → PAL
+    fps_frames_to_wait = fps_is_pal ? (50 / TARGET_FPS) : (60 / TARGET_FPS);
+    fps_previous_jiffy = JIFFY;
+    fps_frame_count = 0;
 }
 
-unsigned char wait_fps(void) {
-    current_jiffy = *JIFFY;
-    if ((unsigned int)(current_jiffy - prev_jiffy) < frames_to_wait)
+uint8_t wait_fps(void) {
+    fps_current_jiffy = JIFFY;
+    if ((uint16_t)(fps_current_jiffy - fps_previous_jiffy)  < fps_frames_to_wait) {
         return 1;
-    prev_jiffy = current_jiffy;
+    }
+    fps_previous_jiffy = fps_current_jiffy;
+    fps_frame_count++;
     return 0;
 }

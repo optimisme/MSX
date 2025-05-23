@@ -45,6 +45,8 @@ compile() {
         hello)
             zcc +msx -create-app -subtype=rom -lmsxbios \
                 "src/$target/main.c" \
+                src/utils/*.asm \
+                src/utils/*.c \
                 -o "$out_dir/app"
             ;;
         background|bitmap|scroll|smooth_scroll_x|smooth_scroll_y)
