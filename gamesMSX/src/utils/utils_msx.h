@@ -16,6 +16,7 @@
 #define MODE_2_TILEMAP_BASE          0x1800
 #define MODE_2_COLOR_BASE            0x2000
 #define MODE_2_SPRITES_BASE          0x1B00
+#define MODE_2_SPRITES_PATTERN_BASE  0x3800
 
 #define MODE_2_PATTERN_BLOCK_SIZE    0x0800  // 2 KB = 256 patterns × 8 bytes
 #define MODE_2_VRAM_COLOR_BASE       0x2000  // 3 blocs

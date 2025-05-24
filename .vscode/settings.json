@@ -60,7 +60,9 @@
         "array": "c",
         "string": "c",
         "string_view": "c",
-        "random.h": "c"
+        "random.h": "c",
+        "*.c_old": "c",
+        "*.c_old2": "c"
     },
     "C_Cpp.errorSquiggles": "disabled",
     "cmake.sourceDirectory": "/Users/albertpalaciosjimenez/Desktop/msx/z88dk-msx/ext/Unity"

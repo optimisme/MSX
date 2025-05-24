@@ -1,0 +1,652 @@
+#pragma bank 2
+
+#include "g2048.h"
+#include <string.h>   
+#include <conio.h>
+
+#define b_key               (vars_buff[0])
+#define b_stick             (vars_buff[1])
+#define game_state          (vars_buff[2])
+#define active_sprites      (vars_buff[3])
+#define animation_counter   (vars_buff[4])
+
+#define BOARD_ROWS          4
+#define BOARD_COLUMNS       4
+#define BOARD_CELLS         (BOARD_ROWS * BOARD_COLUMNS)
+
+#define BOARD_X0            65
+#define BOARD_Y0            32
+#define CELL_WIDTH          32
+#define CELL_HEIGHT         32
+#define CELL_EMPTY          0xFF
+
+#define ANIMATION_FRAMES    8
+#define GAME_STATE_PLAYING  0
+#define GAME_STATE_MOVING   1
+#define GAME_STATE_SPAWNING 2
+
+typedef struct {
+    uint8_t value;   //  tile value (0,2,4,8…)
+    uint8_t sprite;  //  sprite index to display that tile
+} CellVars;
+
+#define CELL_BASE_POS       5
+#define CELL(r,c)           ((CellVars*)&vars_buff[CELL_BASE_POS + ((r)*BOARD_COLUMNS + (c))*2])
+#define CELL_VALUE(r,c)     (CELL(r,c)->value)
+#define CELL_SPRITE(r,c)    (CELL(r,c)->sprite)
+
+typedef struct {
+    uint8_t x;
+    uint8_t y;
+    uint8_t start_x;
+    uint8_t start_y;
+    uint8_t dest_x;
+    uint8_t dest_y;
+    uint8_t frames;
+    uint8_t frame;
+    uint8_t active;
+    uint8_t value;
+} SpriteVars;
+
+#define SPRITES_COUNT       16
+#define SPRITE_BASE_POS     100
+#define SPRITE(i)           ((SpriteVars*)&vars_buff[SPRITE_BASE_POS + (i)*9])
+#define PATTERN_SLOT(i)     ((i) * 4)
+
+// Forward declarations
+void handle_input() __banked;
+void move_tiles(uint8_t direction) __banked;
+void update_animations() __banked;
+void spawn_new_tile() __banked;
+uint8_t can_move() __banked;
+uint8_t compress_row(uint8_t row[4], uint8_t sprite_row[4]) __banked;
+void move_row_left(uint8_t r) __banked;
+void move_row_right(uint8_t r) __banked;
+void move_column_up(uint8_t c) __banked;
+void move_column_down(uint8_t c) __banked;
+void start_sprite_animation(uint8_t sprite_id, uint8_t start_x, uint8_t start_y, uint8_t dest_x, uint8_t dest_y, uint8_t value) __banked;
+uint8_t get_free_sprite() __banked;
+void cell_to_screen_pos(uint8_t row, uint8_t col, uint8_t *x, uint8_t *y) __banked;
+
+// Direction constants
+#define DIR_LEFT    0
+#define DIR_RIGHT   1  
+#define DIR_UP      2
+#define DIR_DOWN    3
+
+void main_g2048() __banked {
+    init_fps();
+    init_game();
+
+    while (1) {
+        if (wait_fps()) continue;
+
+        update_game();
+        handle_input();
+    }
+}
+
+void init_game() __banked {
+    // Set tilemap to blank
+    vdp_set_screen_mode(2);
+
+    // Set tilemap to blank
+    vdp_set_address(MODE_2_TILEMAP_BASE);
+    vdp_blast_tilemap(vdp_tilemap_buff);
+
+    // Set patterns
+    for (uint8_t bank = 0; bank < 3; ++bank) {
+        uint16_t bank_base = bank * 256;
+        for (uint16_t i = 0; i < G2048_BITMAP_TILE_COUNT; ++i) {
+            uint16_t global_idx = bank_base + i;
+            const uint8_t *src = &g2048_bitmap_tileset[i][0];
+            uint8_t *dst = &vdp_global_buff[global_idx * 8];
+            memcpy(dst, src, 8);
+        }
+    }
+    vdp_set_address(MODE_2_VRAM_PATTERN_BASE);
+    vdp_write_bytes(vdp_global_buff, VDP_GLOBAL_SIZE);
+
+    // Set colors
+    for (uint8_t bank = 0; bank < 3; ++bank) {
+        uint16_t bank_base = bank * 256;
+        for (uint16_t i = 0; i < G2048_BITMAP_TILE_COUNT; ++i) {
+            uint16_t global_idx = bank_base + i;
+            for (uint8_t y = 0; y < 8; ++y) {
+                vdp_global_buff[global_idx * 8 + y] = (COLOR_WHITE << 4) | COLOR_BLACK;
+            }
+        }
+    }
+    vdp_set_address(MODE_2_VRAM_COLOR_BASE);
+    vdp_write_bytes(vdp_global_buff, VDP_GLOBAL_SIZE);
+
+    // Set tilemap
+    vdp_set_address(MODE_2_TILEMAP_BASE);
+    vdp_blast_tilemap(g2048_bitmap_tilemap);
+
+    // Set sprite boxes
+    load_all_sprite_graphics();
+    set_sprites_config(true, true);
+
+    restart_game();
+}
+
+void update_game() __banked {
+    switch (game_state) {
+        case GAME_STATE_MOVING:
+            update_animations();
+            break;
+        case GAME_STATE_SPAWNING:
+            // Simple spawn delay
+            animation_counter--;
+            if (animation_counter == 0) {
+                spawn_new_tile();
+                game_state = GAME_STATE_PLAYING;
+            }
+            break;
+        case GAME_STATE_PLAYING:
+            // Game ready for input
+            break;
+    }
+}
+
+void handle_input() __banked {
+    if (game_state != GAME_STATE_PLAYING) return;
+    
+    if (kbhit()) {
+        b_key = cgetc();
+        
+        if (b_key == 'r') {
+            restart_game();
+        } else if (b_key == 0x1B || b_key == 'e') {
+            // Exit game
+            return;
+        } else {
+            uint8_t direction = 0xFF;
+            
+            // Check movement keys
+            switch (b_key) {
+                case 'a': case 'A': case 75: // Left
+                    direction = DIR_LEFT;
+                    break;
+                case 'd': case 'D': case 77: // Right  
+                    direction = DIR_RIGHT;
+                    break;
+                case 'w': case 'W': case 72: // Up
+                    direction = DIR_UP;
+                    break;
+                case 's': case 'S': case 80: // Down
+                    direction = DIR_DOWN;
+                    break;
+            }
+            
+            if (direction != 0xFF) {
+                move_tiles(direction);
+            }
+        }
+    }
+}
+
+void move_tiles(uint8_t direction) __banked {
+    uint8_t moved = 0;
+    
+    // Clear all sprites first
+    for (uint8_t i = 0; i < SPRITES_COUNT; ++i) {
+        SPRITE(i)->active = 0;
+        vdp_update_sprite(i, 0, 0, 0, 208); // Move off-screen
+    }
+    
+    active_sprites = 0;
+    
+    switch (direction) {
+        case DIR_LEFT:
+            for (uint8_t r = 0; r < BOARD_ROWS; ++r) {
+                if (move_row_left(r)) moved = 1;
+            }
+            break;
+        case DIR_RIGHT:
+            for (uint8_t r = 0; r < BOARD_ROWS; ++r) {
+                if (move_row_right(r)) moved = 1;
+            }
+            break;
+        case DIR_UP:
+            for (uint8_t c = 0; c < BOARD_COLUMNS; ++c) {
+                if (move_column_up(c)) moved = 1;
+            }
+            break;
+        case DIR_DOWN:
+            for (uint8_t c = 0; c < BOARD_COLUMNS; ++c) {
+                if (move_column_down(c)) moved = 1;
+            }
+            break;
+    }
+    
+    if (moved) {
+        game_state = GAME_STATE_MOVING;
+        animation_counter = ANIMATION_FRAMES;
+    }
+}
+
+uint8_t move_row_left(uint8_t r) __banked {
+    uint8_t row[4], sprite_row[4];
+    uint8_t moved = 0;
+    
+    // Copy row values and sprite assignments
+    for (uint8_t c = 0; c < 4; ++c) {
+        row[c] = CELL_VALUE(r, c);
+        sprite_row[c] = CELL_SPRITE(r, c);
+    }
+    
+    // Create animation for existing tiles
+    for (uint8_t c = 0; c < 4; ++c) {
+        if (row[c] > 0) {
+            uint8_t start_x, start_y;
+            cell_to_screen_pos(r, c, &start_x, &start_y);
+            
+            uint8_t sprite_id = get_free_sprite();
+            SPRITE(sprite_id)->value = row[c];
+            start_sprite_animation(sprite_id, start_x, start_y, start_x, start_y, row[c]);
+        }
+    }
+    
+    // Compress and merge
+    moved = compress_row(row, sprite_row);
+    
+    // Update final positions for animations
+    uint8_t sprite_idx = 0;
+    for (uint8_t c = 0; c < 4; ++c) {
+        if (row[c] > 0) {
+            uint8_t dest_x, dest_y;
+            cell_to_screen_pos(r, c, &dest_x, &dest_y);
+            
+            // Find sprite to animate to this position
+            while (sprite_idx < SPRITES_COUNT && !SPRITE(sprite_idx)->active) {
+                sprite_idx++;
+            }
+            
+            if (sprite_idx < SPRITES_COUNT) {
+                SPRITE(sprite_idx)->dest_x = dest_x;
+                SPRITE(sprite_idx)->dest_y = dest_y;
+                SPRITE(sprite_idx)->value = row[c];
+                sprite_idx++;
+            }
+        }
+    }
+    
+    // Update board state
+    for (uint8_t c = 0; c < 4; ++c) {
+        CELL_VALUE(r, c) = row[c];
+        CELL_SPRITE(r, c) = sprite_row[c];
+    }
+    
+    return moved;
+}
+
+uint8_t move_row_right(uint8_t r) __banked {
+    uint8_t row[4], sprite_row[4];
+    uint8_t moved = 0;
+    
+    // Copy row values in reverse
+    for (uint8_t c = 0; c < 4; ++c) {
+        row[3-c] = CELL_VALUE(r, c);
+        sprite_row[3-c] = CELL_SPRITE(r, c);
+    }
+    
+    // Create animation for existing tiles
+    for (uint8_t c = 0; c < 4; ++c) {
+        if (CELL_VALUE(r, c) > 0) {
+            uint8_t start_x, start_y;
+            cell_to_screen_pos(r, c, &start_x, &start_y);
+            
+            uint8_t sprite_id = get_free_sprite();
+            start_sprite_animation(sprite_id, start_x, start_y, start_x, start_y, CELL_VALUE(r, c));
+        }
+    }
+    
+    // Compress
+    moved = compress_row(row, sprite_row);
+    
+    // Update animations and board state in reverse
+    uint8_t sprite_idx = 0;
+    for (uint8_t c = 0; c < 4; ++c) {
+        CELL_VALUE(r, 3-c) = row[c];
+        CELL_SPRITE(r, 3-c) = sprite_row[c];
+        
+        if (row[c] > 0) {
+            uint8_t dest_x, dest_y;
+            cell_to_screen_pos(r, 3-c, &dest_x, &dest_y);
+            
+            while (sprite_idx < SPRITES_COUNT && !SPRITE(sprite_idx)->active) {
+                sprite_idx++;
+            }
+            
+            if (sprite_idx < SPRITES_COUNT) {
+                SPRITE(sprite_idx)->dest_x = dest_x;
+                SPRITE(sprite_idx)->dest_y = dest_y;
+                SPRITE(sprite_idx)->value = row[c];
+                sprite_idx++;
+            }
+        }
+    }
+    
+    return moved;
+}
+
+uint8_t move_column_up(uint8_t c) __banked {
+    uint8_t col[4], sprite_col[4];
+    uint8_t moved = 0;
+    
+    // Copy column values
+    for (uint8_t r = 0; r < 4; ++r) {
+        col[r] = CELL_VALUE(r, c);
+        sprite_col[r] = CELL_SPRITE(r, c);
+    }
+    
+    // Create animations
+    for (uint8_t r = 0; r < 4; ++r) {
+        if (col[r] > 0) {
+            uint8_t start_x, start_y;
+            cell_to_screen_pos(r, c, &start_x, &start_y);
+            
+            uint8_t sprite_id = get_free_sprite();
+            start_sprite_animation(sprite_id, start_x, start_y, start_x, start_y, col[r]);
+        }
+    }
+    
+    // Compress
+    moved = compress_row(col, sprite_col);
+    
+    // Update animations and board
+    uint8_t sprite_idx = 0;
+    for (uint8_t r = 0; r < 4; ++r) {
+        CELL_VALUE(r, c) = col[r];
+        CELL_SPRITE(r, c) = sprite_col[r];
+        
+        if (col[r] > 0) {
+            uint8_t dest_x, dest_y;
+            cell_to_screen_pos(r, c, &dest_x, &dest_y);
+            
+            while (sprite_idx < SPRITES_COUNT && !SPRITE(sprite_idx)->active) {
+                sprite_idx++;
+            }
+            
+            if (sprite_idx < SPRITES_COUNT) {
+                SPRITE(sprite_idx)->dest_x = dest_x;
+                SPRITE(sprite_idx)->dest_y = dest_y;
+                SPRITE(sprite_idx)->value = col[r];
+                sprite_idx++;
+            }
+        }
+    }
+    
+    return moved;
+}
+
+uint8_t move_column_down(uint8_t c) __banked {
+    uint8_t col[4], sprite_col[4];
+    uint8_t moved = 0;
+    
+    // Copy column values in reverse
+    for (uint8_t r = 0; r < 4; ++r) {
+        col[3-r] = CELL_VALUE(r, c);
+        sprite_col[3-r] = CELL_SPRITE(r, c);
+    }
+    
+    // Create animations
+    for (uint8_t r = 0; r < 4; ++r) {
+        if (CELL_VALUE(r, c) > 0) {
+            uint8_t start_x, start_y;
+            cell_to_screen_pos(r, c, &start_x, &start_y);
+            
+            uint8_t sprite_id = get_free_sprite();
+            start_sprite_animation(sprite_id, start_x, start_y, start_x, start_y, CELL_VALUE(r, c));
+        }
+    }
+    
+    // Compress
+    moved = compress_row(col, sprite_col);
+    
+    // Update animations and board in reverse
+    uint8_t sprite_idx = 0;
+    for (uint8_t r = 0; r < 4; ++r) {
+        CELL_VALUE(3-r, c) = col[r];
+        CELL_SPRITE(3-r, c) = sprite_col[r];
+        
+        if (col[r] > 0) {
+            uint8_t dest_x, dest_y;
+            cell_to_screen_pos(3-r, c, &dest_x, &dest_y);
+            
+            while (sprite_idx < SPRITES_COUNT && !SPRITE(sprite_idx)->active) {
+                sprite_idx++;
+            }
+            
+            if (sprite_idx < SPRITES_COUNT) {
+                SPRITE(sprite_idx)->dest_x = dest_x;
+                SPRITE(sprite_idx)->dest_y = dest_y;
+                SPRITE(sprite_idx)->value = col[r];
+                sprite_idx++;
+            }
+        }
+    }
+    
+    return moved;
+}
+
+uint8_t compress_row(uint8_t row[4], uint8_t sprite_row[4]) __banked {
+    uint8_t moved = 0;
+    uint8_t write_pos = 0;
+    
+    // First pass: move all non-zero values left
+    for (uint8_t i = 0; i < 4; ++i) {
+        if (row[i] != 0) {
+            if (i != write_pos) {
+                moved = 1;
+            }
+            row[write_pos] = row[i];
+            sprite_row[write_pos] = sprite_row[i];
+            if (i != write_pos) {
+                row[i] = 0;
+                sprite_row[i] = CELL_EMPTY;
+            }
+            write_pos++;
+        }
+    }
+    
+    // Second pass: merge adjacent equal values
+    for (uint8_t i = 0; i < 3; ++i) {
+        if (row[i] != 0 && row[i] == row[i+1]) {
+            row[i] *= 2;
+            row[i+1] = 0;
+            sprite_row[i+1] = CELL_EMPTY;
+            moved = 1;
+            i++; // Skip next to avoid chain merging
+        }
+    }
+    
+    // Third pass: compact again after merging
+    write_pos = 0;
+    for (uint8_t i = 0; i < 4; ++i) {
+        if (row[i] != 0) {
+            if (i != write_pos) {
+                moved = 1;
+            }
+            row[write_pos] = row[i];
+            sprite_row[write_pos] = sprite_row[i];
+            if (i != write_pos) {
+                row[i] = 0;
+                sprite_row[i] = CELL_EMPTY;
+            }
+            write_pos++;
+        }
+    }
+    
+    return moved;
+}
+
+void update_animations() __banked {
+    uint8_t all_finished = 1;
+    
+    for (uint8_t i = 0; i < SPRITES_COUNT; ++i) {
+        if (SPRITE(i)->active) {
+            SPRITE(i)->frame++;
+            
+            if (SPRITE(i)->frame >= ANIMATION_FRAMES) {
+                // Animation finished
+                SPRITE(i)->x = SPRITE(i)->dest_x;
+                SPRITE(i)->y = SPRITE(i)->dest_y;
+                SPRITE(i)->active = 0;
+                
+                // Hide sprite
+                vdp_update_sprite(i, 0, 0, 0, 208);
+            } else {
+                // Interpolate position
+                uint8_t progress = SPRITE(i)->frame;
+                uint8_t total = ANIMATION_FRAMES;
+                
+                SPRITE(i)->x = SPRITE(i)->start_x + 
+                    ((SPRITE(i)->dest_x - SPRITE(i)->start_x) * progress) / total;
+                SPRITE(i)->y = SPRITE(i)->start_y + 
+                    ((SPRITE(i)->dest_y - SPRITE(i)->start_y) * progress) / total;
+                
+                // Update sprite on screen
+                uint8_t sprite_idx = value_to_sprite_index(SPRITE(i)->value);
+                uint8_t pattern = PATTERN_SLOT(sprite_idx);
+                uint8_t color = COLOR_DARK_RED + (i % 8); // Vary colors
+                
+                vdp_update_sprite(i, pattern, color, SPRITE(i)->x, SPRITE(i)->y);
+                all_finished = 0;
+            }
+        }
+    }
+    
+    if (all_finished) {
+        game_state = GAME_STATE_SPAWNING;
+        animation_counter = 10; // Brief delay before spawning
+    }
+}
+
+void start_sprite_animation(uint8_t sprite_id, uint8_t start_x, uint8_t start_y, uint8_t dest_x, uint8_t dest_y, uint8_t value) __banked {
+    SPRITE(sprite_id)->start_x = start_x;
+    SPRITE(sprite_id)->start_y = start_y;
+    SPRITE(sprite_id)->dest_x = dest_x;
+    SPRITE(sprite_id)->dest_y = dest_y;
+    SPRITE(sprite_id)->x = start_x;
+    SPRITE(sprite_id)->y = start_y;
+    SPRITE(sprite_id)->frame = 0;
+    SPRITE(sprite_id)->frames = ANIMATION_FRAMES;
+    SPRITE(sprite_id)->active = 1;
+    SPRITE(sprite_id)->value = value;
+    active_sprites++;
+}
+
+uint8_t get_free_sprite() __banked {
+    for (uint8_t i = 0; i < SPRITES_COUNT; ++i) {
+        if (!SPRITE(i)->active) {
+            return i;
+        }
+    }
+    return 0; // Fallback
+}
+
+void cell_to_screen_pos(uint8_t row, uint8_t col, uint8_t *x, uint8_t *y) __banked {
+    *x = BOARD_X0 + col * CELL_WIDTH;
+    *y = BOARD_Y0 + row * CELL_HEIGHT;
+}
+
+void spawn_new_tile() __banked {
+    // Find empty cells
+    uint8_t empty_cells[BOARD_CELLS];
+    uint8_t empty_count = 0;
+    
+    for (uint8_t r = 0; r < BOARD_ROWS; ++r) {
+        for (uint8_t c = 0; c < BOARD_COLUMNS; ++c) {
+            if (CELL_VALUE(r, c) == 0) {
+                empty_cells[empty_count] = r * BOARD_COLUMNS + c;
+                empty_count++;
+            }
+        }
+    }
+    
+    if (empty_count > 0) {
+        uint8_t chosen = empty_cells[random_8() % empty_count];
+        uint8_t r = chosen / BOARD_COLUMNS;
+        uint8_t c = chosen % BOARD_COLUMNS;
+        
+        uint8_t value = (random_8() < 230) ? 2 : 4; // 90% chance of 2, 10% chance of 4
+        CELL_VALUE(r, c) = value;
+        
+        uint8_t sprite_id = get_free_sprite();
+        CELL_SPRITE(r, c) = sprite_id;
+        
+        uint8_t x, y;
+        cell_to_screen_pos(r, c, &x, &y);
+        
+        uint8_t sprite_idx = value_to_sprite_index(value);
+        uint8_t pattern = PATTERN_SLOT(sprite_idx);
+        uint8_t color = COLOR_DARK_BLUE + (sprite_id % 8);
+        
+        vdp_update_sprite(sprite_id, pattern, color, x, y);
+    }
+}
+
+// Rest of the original functions remain the same...
+
+void vdp_define_sprite16(uint8_t sprite_idx, const uint8_t data[32]) __banked {
+    uint8_t pat = sprite_idx * 4;
+    uint16_t addr = 0x3800 + (pat << 3);
+    for (uint8_t i = 0; i < 32; ++i) {
+        msx_vpoke(addr + i, data[i]);
+    }
+}
+
+void load_all_sprite_graphics(void) __banked {
+    for (uint8_t i = 0; i < G2048_SPRITES_SPRITE_COUNT; ++i) {
+        vdp_define_sprite16(i, g2048_sprites_bitmap_spriteset[i]);
+    }
+}
+
+uint8_t random_cell_index() __banked {
+    return random_8() % BOARD_CELLS;
+}
+
+uint8_t value_to_sprite_index(uint16_t value) __banked {
+    switch (value) {
+        case   2:   return 10;
+        case   4:   return 9;
+        case   8:   return 8;
+        case  16:   return 7;
+        case  32:   return 6;
+        case  64:   return 5;  
+        case 128:   return 4;
+        case 256:   return 3;
+        case 512:   return 2;
+        case 1024:  return 1;
+        case 2048:  return 0;
+        default:    return 11;
+    }
+}
+
+void restart_game(void) __banked {
+    // Clear all cells
+    for (uint8_t i = 0; i < BOARD_ROWS; ++i) {
+        for (uint8_t j = 0; j < BOARD_COLUMNS; ++j) {
+            CELL_VALUE(i,j)  = 0;
+            CELL_SPRITE(i,j) = CELL_EMPTY;
+        }
+    }
+    
+    // Clear all sprites
+    for (uint8_t i = 0; i < SPRITES_COUNT; ++i) {
+        SPRITE(i)->active = 0;
+        vdp_update_sprite(i, 0, 0, 0, 208);
+    }
+    
+    // Initialize game state
+    game_state = GAME_STATE_PLAYING;
+    active_sprites = 0;
+    animation_counter = 0;
+    
+    // Spawn initial tiles
+    spawn_new_tile();
+    spawn_new_tile();
+}
