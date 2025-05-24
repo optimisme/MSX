@@ -24,7 +24,7 @@ typedef struct {
 
 void init_game(void) __banked;
 void update_game() __banked;
-void handle_input() __banked;
+uint8_t handle_input() __banked;
 
 void load_sprite_patterns(void) __banked;
 

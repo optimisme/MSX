@@ -43,7 +43,7 @@ void main_g2048() __banked {
 
     while (1) {
         if (wait_fps()) continue;
-        handle_input();
+        if (handle_input()) break;
         update_game();
     }
 }
@@ -87,14 +87,14 @@ void init_game() __banked {
     restart_game();
 }
 
-void handle_input() __banked {
-    if (b_game_state != GAME_STATE_PLAYING) return;
+uint8_t handle_input() __banked {
+    if (b_game_state != GAME_STATE_PLAYING) return 0;
     if (kbhit()) {
         b_key = cgetc();
         if (b_key == 'r') {
             restart_game();
         } else if (b_key == 0x1B || b_key == 'e') {
-            return;
+            return 1;
         }
     }
     b_stick = msx_get_stick(0);
@@ -103,8 +103,8 @@ void handle_input() __banked {
         case STICK_RIGHT: move_tiles(DIR_RIGHT); break;
         case STICK_DOWN: move_tiles(DIR_DOWN); break;
         case STICK_LEFT: move_tiles(DIR_LEFT); break;
-
     }
+    return 0;
 }
 
 void apply_post_move(void) __banked {
