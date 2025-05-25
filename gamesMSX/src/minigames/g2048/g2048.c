@@ -13,7 +13,7 @@
 #define BOARD_CELLS         (BOARD_ROWS * BOARD_COLUMNS)
 
 #define CELL_BASE_POS       10
-#define CELL(r,c)           ((uint8_t*)&vars_buff[CELL_BASE_POS + ((r)*BOARD_COLUMNS + (c))])
+#define CELL(r,c)           ((uint16_t*)&vars_buff[CELL_BASE_POS + ((r) * BOARD_COLUMNS + (c)) * 2])
 #define CELL_VALUE(r,c)     (*CELL(r,c))
 
 #define BOARD_X0            65
@@ -25,16 +25,18 @@
 #define GAME_STATE_PLAYING  0
 #define GAME_STATE_MOVING   1
 #define GAME_STATE_SPAWNING 2
+#define GAME_STATE_LOST     3
+#define GAME_STATE_WON      4
 
-#define DIR_LEFT    0
-#define DIR_RIGHT   1  
-#define DIR_UP      2
-#define DIR_DOWN    3
+#define DIR_LEFT            0
+#define DIR_RIGHT           1  
+#define DIR_UP              2
+#define DIR_DOWN            3
 
-#define SPRITES_VARS_COUNT  9
+#define SPRITES_VARS_SIZE   sizeof(SPRITE_t) 
 #define SPRITES_COUNT       16
 #define SPRITE_BASE_POS     100
-#define SPRITE(i)           ((SPRITE_t*)&vars_buff[SPRITE_BASE_POS + (i)*SPRITES_VARS_COUNT])
+#define SPRITE(i)           ((SPRITE_t*)&vars_buff[SPRITE_BASE_POS + (i) * SPRITES_VARS_SIZE])
 #define PATTERN_SLOT(i)     ((i) * 4)
 
 void main_g2048() __banked {
@@ -88,22 +90,30 @@ void init_game() __banked {
 }
 
 uint8_t handle_input() __banked {
-    if (b_game_state != GAME_STATE_PLAYING) return 0;
-    if (kbhit()) {
+
+    if ((b_game_state == GAME_STATE_LOST ||
+         b_game_state == GAME_STATE_WON ||
+         b_game_state == GAME_STATE_PLAYING) &&
+        kbhit()) {
+
         b_key = cgetc();
         if (b_key == 'r') {
             restart_game();
         } else if (b_key == 0x1B || b_key == 'e') {
-            return 1;
+            return 1;  // exit game
         }
     }
-    b_stick = msx_get_stick(0);
-    switch (b_stick) {
-        case STICK_UP: move_tiles(DIR_UP); break;
-        case STICK_RIGHT: move_tiles(DIR_RIGHT); break;
-        case STICK_DOWN: move_tiles(DIR_DOWN); break;
-        case STICK_LEFT: move_tiles(DIR_LEFT); break;
+
+    if (b_game_state == GAME_STATE_PLAYING) {
+        b_stick = msx_get_stick(0);
+        switch (b_stick) {
+            case STICK_UP:    move_tiles(DIR_UP);    break;
+            case STICK_RIGHT: move_tiles(DIR_RIGHT); break;
+            case STICK_DOWN:  move_tiles(DIR_DOWN);  break;
+            case STICK_LEFT:  move_tiles(DIR_LEFT);  break;
+        }
     }
+
     return 0;
 }
 
@@ -133,6 +143,14 @@ void update_game() __banked {
     if (b_game_state == GAME_STATE_MOVING) {
         if (!update_animations()) {
             apply_post_move();
+            
+            // Comprovar si s'ha guanyat (arribat a 2048)
+            if (check_game_won()) {
+                b_game_state = GAME_STATE_WON;
+                show_game_won();
+                return;
+            }
+            
             b_game_state = GAME_STATE_SPAWNING;
         }
     } else if (b_game_state == GAME_STATE_SPAWNING) {
@@ -141,12 +159,16 @@ void update_game() __banked {
         } else {
             // No s'ha pogut afegir una nova peça
             if (!board_has_moves()) {
-                // Game Over - podries afegir aquí la lògica de fi de joc
-                b_game_state = GAME_STATE_PLAYING; // o un nou estat GAME_OVER
+                b_game_state = GAME_STATE_LOST;
+                show_game_lost();
             } else {
                 b_game_state = GAME_STATE_PLAYING;
             }
         }
+    } else if (b_game_state == GAME_STATE_LOST) {
+        // Mantenir l'estat de perdut fins que es reiniciï
+    } else if (b_game_state == GAME_STATE_WON) {
+        // Mantenir l'estat de guanyat fins que es reiniciï
     }
 }
 
@@ -199,7 +221,7 @@ uint8_t value_to_color(uint16_t value) __banked {
 }
 
 void reset_sprite(uint8_t i) __banked {
-    uint8_t value = 0;
+    uint16_t value = 0; 
     uint8_t pattern = PATTERN_SLOT(value_to_sprite_index(value)); 
     uint8_t color = value_to_color(value);
 
@@ -234,7 +256,7 @@ void restart_game(void) __banked {
         idx2 = get_random_sprite_index();
     } while (idx2 == idx1);
 
-    uint8_t value = 2;
+    uint16_t value = 2;  
     uint8_t pattern = PATTERN_SLOT(value_to_sprite_index(value)); 
     uint8_t color = value_to_color(value);
 
@@ -271,7 +293,8 @@ void move_tiles(uint8_t direction) __banked {
 }
 
 uint8_t move_col_up(uint8_t c) __banked {
-    uint8_t tmp[4], write = 0, moved = 0, last_merge = -1;
+    uint16_t tmp[4];  
+    uint8_t write = 0, moved = 0, last_merge = -1;
     // copy & clear
     for (uint8_t r = 0; r < 4; ++r) {
         tmp[r] = CELL_VALUE(r, c);
@@ -279,7 +302,7 @@ uint8_t move_col_up(uint8_t c) __banked {
     }
     // merge/move up
     for (uint8_t i = 0; i < 4; ++i) {
-        uint8_t val = tmp[i];
+        uint16_t val = tmp[i];  
         if (!val) continue;
         uint8_t src = i * BOARD_COLUMNS + c;
         if (write > 0
@@ -310,7 +333,7 @@ uint8_t move_col_up(uint8_t c) __banked {
 }
 
 uint8_t move_row_right(uint8_t r) __banked {
-    uint8_t tmp_vals[4];
+    uint16_t tmp_vals[4];  
     uint8_t write = BOARD_COLUMNS - 1;
     uint8_t moved = 0;
     int8_t last_merge = -1;
@@ -323,7 +346,7 @@ uint8_t move_row_right(uint8_t r) __banked {
 
     // merge/move right
     for (int8_t i = BOARD_COLUMNS - 1; i >= 0; --i) {
-        uint8_t val = tmp_vals[i];
+        uint16_t val = tmp_vals[i];  
         if (!val) continue;
         uint8_t src = r * BOARD_COLUMNS + i;
 
@@ -353,7 +376,8 @@ uint8_t move_row_right(uint8_t r) __banked {
 }
 
 uint8_t move_col_down(uint8_t c) __banked {
-    uint8_t tmp[4], write = BOARD_ROWS-1, moved = 0, last_merge = -1;
+    uint16_t tmp[4];  
+    uint8_t write = BOARD_ROWS-1, moved = 0, last_merge = -1;
     // copy & clear
     for (uint8_t r = 0; r < 4; ++r) {
         tmp[r] = CELL_VALUE(r, c);
@@ -361,7 +385,7 @@ uint8_t move_col_down(uint8_t c) __banked {
     }
     // merge/move down
     for (int8_t i = 3; i >= 0; --i) {
-        uint8_t val = tmp[i];
+        uint16_t val = tmp[i];  
         if (!val) continue;
         uint8_t src = i * BOARD_COLUMNS + c;
         if (write < BOARD_ROWS-1
@@ -392,7 +416,7 @@ uint8_t move_col_down(uint8_t c) __banked {
 }
 
 uint8_t move_row_left(uint8_t r) __banked {
-    uint8_t tmp_vals[4];
+    uint16_t tmp_vals[4];  
     uint8_t write = 0;
     uint8_t moved = 0;
     int8_t last_merge = -1;
@@ -406,7 +430,7 @@ uint8_t move_row_left(uint8_t r) __banked {
     }
 
     for (uint8_t i = 0; i < 4; i++) {
-        uint8_t val = tmp_vals[i];
+        uint16_t val = tmp_vals[i];  
         if (!val) continue;
 
         uint8_t src_sprite = r * BOARD_COLUMNS + i;
@@ -491,20 +515,19 @@ uint8_t update_animations() __banked {
 }
 
 uint8_t board_has_moves(void) __banked {
-    // Comprovar si hi ha cel·les buides
+
+    // check for empty cells
     for (uint8_t r = 0; r < BOARD_ROWS; ++r) {
         for (uint8_t c = 0; c < BOARD_COLUMNS; ++c) {
             if (CELL_VALUE(r, c) == 0) return 1;
         }
     }
 
-    // Comprovar si hi ha moviments possibles (cel·les adjacents iguals)
+    // check for valid movements
     for (uint8_t r = 0; r < BOARD_ROWS; ++r) {
         for (uint8_t c = 0; c < BOARD_COLUMNS; ++c) {
-            uint16_t v = CELL_VALUE(r, c);
-            // Comprovar cel·la de la dreta
+            uint16_t v = CELL_VALUE(r, c); 
             if (c < BOARD_COLUMNS - 1 && v == CELL_VALUE(r, c + 1)) return 1;
-            // Comprovar cel·la de sota
             if (r < BOARD_ROWS - 1 && v == CELL_VALUE(r + 1, c)) return 1;
         }
     }
@@ -515,7 +538,7 @@ uint8_t spawn_random_tile(void) __banked {
     uint8_t empties[BOARD_CELLS];
     uint8_t n = 0;
     
-    // Trobar totes les cel·les buides basant-se en CELL_VALUE
+    // get empty cells
     for (uint8_t r = 0; r < BOARD_ROWS; ++r) {
         for (uint8_t c = 0; c < BOARD_COLUMNS; ++c) {
             if (CELL_VALUE(r, c) == 0) {
@@ -524,23 +547,46 @@ uint8_t spawn_random_tile(void) __banked {
         }
     }
     
-    if (n == 0) return 0; // No hi ha cel·les buides
+    if (n == 0) return 0; // no empty cells left
     
-    // Seleccionar una cel·la buida aleatòria
+    // randomly get an empty cell
     uint8_t cell_idx = empties[random_8() % n];
     uint8_t row = cell_idx / BOARD_COLUMNS;
     uint8_t col = cell_idx % BOARD_COLUMNS;
-    uint8_t value = (random_8() % 10 == 0) ? 4 : 2; // 10% probabilitat de 4, 90% de 2
+    uint16_t value = (random_8() % 10 == 0) ? 4 : 2; 
     
-    // Actualitzar tant la matriu de cel·les com l'sprite
+    // update board and sprites
     CELL_VALUE(row, col) = value;
     SPRITE(cell_idx)->value = value;
     
-    // Actualitzar l'sprite visual
+    // update sprites visually
     vdp_update_sprite(cell_idx,
         PATTERN_SLOT(value_to_sprite_index(value)),
         value_to_color(value),
         SPRITE(cell_idx)->x, SPRITE(cell_idx)->y);
     
     return 1;
+}
+
+uint8_t check_game_won(void) __banked {
+    for (uint8_t r = 0; r < BOARD_ROWS; ++r) {
+        for (uint8_t c = 0; c < BOARD_COLUMNS; ++c) {
+            if (CELL_VALUE(r, c) == 2048) {
+                return 1;
+            }
+        }
+    }
+    return 0;
+}
+
+void show_game_lost(void) __banked {
+    // Aquí pots afegir la lògica per mostrar el missatge de derrota
+    // Ex: mostrar text "GAME OVER" en pantalla
+    // Per ara, simplement podem deixar-ho buit o afegir un comentari
+}
+
+void show_game_won(void) __banked {
+    // Aquí pots afegir la lògica per mostrar el missatge de victòria
+    // Ex: mostrar text "YOU WIN!" en pantalla
+    // Per ara, simplement podem deixar-ho buit o afegir un comentari
 }
