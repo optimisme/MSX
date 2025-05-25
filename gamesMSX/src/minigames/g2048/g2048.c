@@ -45,7 +45,7 @@
 #define LAST_CHAR           (FIRST_CHAR + ALPHABET_BITMAP_TILE_COUNT - 1)
 #define CHAR_TO_INDEX(c)    (((c) >= FIRST_CHAR && (c) <= LAST_CHAR) \
                                 ? ((uint8_t)(c) - FIRST_CHAR)       \
-                                : INVALID_CHAR)
+                                : INVALID_CHAR) 
 
 void main_g2048() __banked {
     init_fps();
