@@ -1,6 +1,7 @@
 #ifndef G2048_H
 #define G2048_H
 #include <conio.h>
+#include "alphabet_bitmap.h"
 #include "g2048_bitmap.h"
 #include "g2048_sprites.h"
 #include "../buffers.h"
@@ -23,6 +24,7 @@ typedef struct {
 void init_game(void) __banked;
 void update_game() __banked;
 uint8_t handle_input() __banked;
+void write_text_to_tilemap_buff(const char *text, uint16_t pos) __banked;
 void load_sprite_patterns(void) __banked;
 uint8_t get_random_sprite_index() __banked;
 uint8_t value_to_sprite_index(uint16_t value) __banked;
