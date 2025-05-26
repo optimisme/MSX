@@ -193,6 +193,12 @@ void apply_post_move(void) __banked {
 }
 
 void update_game() __banked {
+    if (b_game_state == GAME_STATE_PLAYING && !board_has_moves()) {
+        b_game_state = GAME_STATE_LOST;
+        show_game_lost();
+        return;
+    }
+
     if (b_game_state == GAME_STATE_MOVING) {
         if (!update_animations()) {
             apply_post_move();
@@ -210,13 +216,7 @@ void update_game() __banked {
         if (spawn_random_tile()) {
             b_game_state = GAME_STATE_PLAYING;
         } else {
-            // No s'ha pogut afegir una nova peça
-            if (!board_has_moves()) {
-                b_game_state = GAME_STATE_LOST;
-                show_game_lost();
-            } else {
-                b_game_state = GAME_STATE_PLAYING;
-            }
+            b_game_state = GAME_STATE_PLAYING;
         }
     } else if (b_game_state == GAME_STATE_LOST) {
         // Mantenir l'estat de perdut fins que es reiniciï
@@ -612,6 +612,7 @@ uint8_t board_has_moves(void) __banked {
             if (r < BOARD_ROWS - 1 && v == CELL_VALUE(r + 1, c)) return 1;
         }
     }
+
     return 0;   
 }
 
@@ -661,7 +662,7 @@ uint8_t check_game_won(void) __banked {
 }
 
 void show_game_lost(void) __banked {
-    write_text_to_vram("Game  Over", 5 * 32 + 12);
+    write_text_to_vram("Game  Over", 3 * 32 + 11);
 }
 
 void show_game_won(void) __banked {
