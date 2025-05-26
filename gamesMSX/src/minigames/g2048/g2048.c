@@ -47,6 +47,9 @@
                                 ? ((uint8_t)(c) - FIRST_CHAR)       \
                                 : INVALID_CHAR) 
 
+
+#define WIN_VALUE           2048
+
 void main_g2048() __banked {
     init_fps();
     init_game();
@@ -118,15 +121,20 @@ void init_game() __banked {
     vdp_write_bytes(vdp_global_buff, VDP_GLOBAL_SIZE);
 
     // Set background tilemap to 'vdp_tilemap_buff'
+    /*
     memcpy(vdp_tilemap_buff, g2048_bitmap_tilemap, sizeof(vdp_tilemap_buff));
-
-    // Overlay our HUD text into the buffer
     write_text_to_tilemap_buff("(E)xit game", 23 * 32);
     write_text_to_tilemap_buff("(R)estart", 23 * 32 + 23);
+    vdp_set_address(MODE_2_TILEMAP_BASE);
+    vdp_blast_tilemap(vdp_tilemap_buff);
+    */
 
     // Push the complete buffer to VRAM
     vdp_set_address(MODE_2_TILEMAP_BASE);
-    vdp_blast_tilemap(vdp_tilemap_buff);
+    vdp_blast_tilemap(g2048_bitmap_tilemap);
+    write_text_to_vram("(E)xit game", 23 * 32);
+    write_text_to_vram("(R)estart", 23 * 32 + 23);
+    
 
     load_sprite_patterns();
     set_sprites_config(true, true);
@@ -217,6 +225,21 @@ void update_game() __banked {
     }
 }
 
+void write_text_to_vram(const char *text, uint16_t pos) __banked {
+    // build a small buffer of tile-indices
+    uint8_t buf[32];
+    uint16_t len = 0;
+    for (uint16_t i = 0; text[i] && i < sizeof(buf); ++i) {
+        uint8_t idx = CHAR_TO_INDEX(text[i]);
+        if (idx == INVALID_CHAR) continue;
+        buf[len++] = ALPHABET_BASE + idx;
+    }
+    // point VDP to tilemap position
+    vdp_set_address(MODE_2_TILEMAP_BASE + pos);
+    // write them straight into VRAM
+    vdp_write_bytes(buf, len);
+}
+
 void write_text_to_tilemap_buff(const char *text, uint16_t pos) __banked {
     for (uint16_t i = 0; text[i]; ++i) {
         uint8_t idx = CHAR_TO_INDEX(text[i]);
@@ -293,6 +316,11 @@ void reset_sprite(uint8_t i) __banked {
 }
 
 void restart_game(void) __banked {
+
+    // Clear 'win/game over' text
+    write_text_to_vram("              ", 3 * 32 + 10);
+
+    // Reset board
     for (uint8_t r = 0; r < BOARD_ROWS; ++r) {
         for (uint8_t c = 0; c < BOARD_COLUMNS; ++c) {
             CELL_VALUE(r, c) = 0;
@@ -624,7 +652,7 @@ uint8_t spawn_random_tile(void) __banked {
 uint8_t check_game_won(void) __banked {
     for (uint8_t r = 0; r < BOARD_ROWS; ++r) {
         for (uint8_t c = 0; c < BOARD_COLUMNS; ++c) {
-            if (CELL_VALUE(r, c) == 2048) {
+            if (CELL_VALUE(r, c) == WIN_VALUE) {
                 return 1;
             }
         }
@@ -633,13 +661,9 @@ uint8_t check_game_won(void) __banked {
 }
 
 void show_game_lost(void) __banked {
-    // Aquí pots afegir la lògica per mostrar el missatge de derrota
-    // Ex: mostrar text "GAME OVER" en pantalla
-    // Per ara, simplement podem deixar-ho buit o afegir un comentari
+    write_text_to_vram("Game  Over", 5 * 32 + 12);
 }
 
 void show_game_won(void) __banked {
-    // Aquí pots afegir la lògica per mostrar el missatge de victòria
-    // Ex: mostrar text "YOU WIN!" en pantalla
-    // Per ara, simplement podem deixar-ho buit o afegir un comentari
+    write_text_to_vram("Great, 2048!", 3 * 32 + 10);
 }
