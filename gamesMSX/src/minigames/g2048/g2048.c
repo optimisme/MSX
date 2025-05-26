@@ -688,10 +688,10 @@ void clean_vdp(void) __banked {
     vdp_set_address(MODE_2_VRAM_PATTERN_BASE);
     vdp_write_bytes(vdp_global_buff, MODE_2_PATTERN_BLOCK_SIZE * 3);
 
-    // Clear all colour data
-    memset(vdp_global_buff, 0, MODE_2_COLOR_BLOCK_SIZE * 3);
-    vdp_set_address(MODE_2_VRAM_COLOR_BASE);
-    vdp_write_bytes(vdp_global_buff, MODE_2_COLOR_BLOCK_SIZE * 3);
+    // DO NOT Clear all colour data
+    //memset(vdp_global_buff, 0, MODE_2_COLOR_BLOCK_SIZE * 3);
+    //vdp_set_address(MODE_2_VRAM_COLOR_BASE);
+    //vdp_write_bytes(vdp_global_buff, MODE_2_COLOR_BLOCK_SIZE * 3);
 
     // Clear background tilemap
     memset(vdp_tilemap_buff, 0, sizeof(vdp_tilemap_buff));
