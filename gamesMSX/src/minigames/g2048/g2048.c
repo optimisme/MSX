@@ -59,6 +59,8 @@ void main_g2048() __banked {
         if (handle_input()) break;
         update_game();
     }
+
+    clean_vdp();
 }
 
 void init_game() __banked {
@@ -667,4 +669,33 @@ void show_game_lost(void) __banked {
 
 void show_game_won(void) __banked {
     write_text_to_vram("Great, 2048!", 3 * 32 + 10);
+}
+
+void clean_vdp(void) __banked {
+    // 1) clear background tilemap
+    memset(vdp_tilemap_buff, 0, sizeof(vdp_tilemap_buff));
+    vdp_set_address(MODE_2_TILEMAP_BASE);
+    vdp_blast_tilemap(vdp_tilemap_buff);
+
+    // 2) clear all tile patterns
+    memset(vdp_global_buff, 0, MODE_2_PATTERN_BLOCK_SIZE * 3);
+    vdp_set_address(MODE_2_VRAM_PATTERN_BASE);
+    vdp_write_bytes(vdp_global_buff, MODE_2_PATTERN_BLOCK_SIZE * 3);
+
+    // 3) clear all colour data
+    memset(vdp_global_buff, 0, MODE_2_COLOR_BLOCK_SIZE * 3);
+    vdp_set_address(MODE_2_VRAM_COLOR_BASE);
+    vdp_write_bytes(vdp_global_buff, MODE_2_COLOR_BLOCK_SIZE * 3);
+
+    // 4) clear sprite attribute table (Y, X, pattern, colour)
+    {
+        uint8_t zero_attrs[SPRITES_COUNT * 4] = { 0 };
+        vdp_set_address(MODE_2_SPRITES_BASE);
+        vdp_write_bytes(zero_attrs, SPRITES_COUNT * 4);
+    }
+
+    // 5) clear sprite patterns
+    memset(vdp_global_buff, 0, MODE_2_PATTERN_BLOCK_SIZE);
+    vdp_set_address(MODE_2_SPRITES_PATTERN_BASE);
+    vdp_write_bytes(vdp_global_buff, MODE_2_PATTERN_BLOCK_SIZE);
 }

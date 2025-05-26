@@ -46,5 +46,6 @@ uint8_t spawn_random_tile(void) __banked;
 uint8_t check_game_won(void) __banked;
 void show_game_lost(void) __banked;
 void show_game_won(void) __banked;
+void clean_vdp(void) __banked;
 
 #endif
