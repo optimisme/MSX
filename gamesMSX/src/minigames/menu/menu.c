@@ -16,14 +16,14 @@
 #define b_current_frame     (vars_buff[11])
 
 #define C_ANIMATION_MS      250
-#define C_POS_1_X           35
-#define C_POS_1_Y           109
-#define C_POS_2_X           35
-#define C_POS_2_Y           132
-#define C_POS_3_X           135
-#define C_POS_3_Y           109
-#define C_POS_4_X           135
-#define C_POS_4_Y           132
+#define C_POS_1_X           40
+#define C_POS_1_Y           128
+#define C_POS_2_X           40
+#define C_POS_2_Y           144
+#define C_POS_3_X           136
+#define C_POS_3_Y           128
+#define C_POS_4_X           136
+#define C_POS_4_Y           144
 
 const unsigned char sprite_arrow[8] = {
     0b11001000,

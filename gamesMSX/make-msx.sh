@@ -39,23 +39,23 @@ compile() {
             cd assets
             python transform_bitmap.py menu_bitmap.png --pragma 1
             rm -f ../src/minigames/menu/menu_bitmap.*
-            cp -f menu_bitmap.h ../src/minigames/menu/
-            cp -f menu_bitmap.c ../src/minigames/menu/
+            mv -f menu_bitmap.h ../src/minigames/menu/
+            mv -f menu_bitmap.c ../src/minigames/menu/
             python transform_bitmap.py g2048_bitmap.png --pragma 2
             rm -f ../src/minigames/menu/g2048_bitmap.*
-            cp -f g2048_bitmap.h ../src/minigames/g2048/
-            cp -f g2048_bitmap.c ../src/minigames/g2048/
+            mv -f g2048_bitmap.h ../src/minigames/g2048/
+            mv -f g2048_bitmap.c ../src/minigames/g2048/
             python transform_bitmap.py alphabet_bitmap.png --pragma 2
             rm -f ../src/minigames/menu/alphabet_bitmap.*
-            cp -f alphabet_bitmap.h ../src/minigames/g2048/
-            cp -f alphabet_bitmap.c ../src/minigames/g2048/
+            mv -f alphabet_bitmap.h ../src/minigames/g2048/
+            mv -f alphabet_bitmap.c ../src/minigames/g2048/
             python transform_sprites16.py g2048_sprites.png --pragma 2
             rm -f ../src/minigames/menu/g2048_sprites.*
-            cp -f g2048_sprites.h ../src/minigames/g2048/
-            cp -f g2048_sprites.c ../src/minigames/g2048/
+            mv -f g2048_sprites.h ../src/minigames/g2048/
+            mv -f g2048_sprites.c ../src/minigames/g2048/
             # python transform_alpha.py alpha.png
-            # cp -f alpha.h ../src/utils/
-            # cp -f alpha.c ../src/utils/
+            # mv -f alpha.h ../src/utils/
+            # mv -f alpha.c ../src/utils/
             cd ..
             zcc +msx \
                     -create-app -subtype=rom -lmsxbios \
