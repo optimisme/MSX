@@ -15,6 +15,21 @@ _vdp_set_address:
     ENDR
     ret
 
+PUBLIC _vdp_write_byte
+_vdp_write_byte:
+    ld   c, DATA_PORT
+    ld   a, l 
+    out  (c), a
+    ret
+
+PUBLIC _vdp_read_byte
+_vdp_read_byte:
+    ld c, DATA_PORT
+    in a, (c)
+    ld l, a        
+    ld h, 0        
+    ret
+
 PUBLIC _vdp_write_bytes
 _vdp_write_bytes:
     pop  bc 

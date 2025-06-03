@@ -49,7 +49,7 @@ compile() {
                 src/utils/*.c \
                 -o "$out_dir/app"
             ;;
-        background|bitmap|scroll|smooth_scroll_x|smooth_scroll_y)
+        background|bitmap|scroll|smooth_scroll_x|smooth_scroll_x2|smooth_scroll_y)
             zcc +msx -create-app -subtype=rom -lmsxbios \
                      -O3 --opt-code-speed \
                 src/$target/*.c \

@@ -45,7 +45,7 @@ void main(void) {
 
         } else if (selected_bank == 4) {
 
-            bank4_content();
+            main_gSnake();
             selected_menu_option = 3;
             selected_bank = 1;
 

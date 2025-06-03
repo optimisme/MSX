@@ -8,16 +8,16 @@
  */
 uint current_screen_mode = 0xFF;
 void vdp_set_screen_mode(uint8_t value) {
-
     if (current_screen_mode == value) return;
     current_screen_mode = value;
-
-    // Switch to the defined screen mode
     msx_screen(value);
-
-    if (value == 2) {
-        vdp_set_reg(3, 0xFF); // Set color table base
-        vdp_set_reg(4, 0x03); // Set pattern table base
+    
+    if (value == 2) { // SCREEN 2
+        vdp_set_reg(3, 0xFF); // CT = 3FC0h
+        vdp_set_reg(4, 0x03); // PT = 1800h
+    } else if (value == 3) { // SCREEN 3 - Multicolor Mode
+        vdp_set_reg(2, 0x02);   // Pattern Position Table at 0x0800 (02h * 0x400)
+        vdp_set_reg(4, 0x00);   // PT 0x0000
     }
 }
 

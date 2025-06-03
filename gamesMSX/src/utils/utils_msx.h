@@ -73,6 +73,8 @@
 extern void suspend_interrupts(void) __z88dk_callee;
 extern void resume_interrupts(void) __z88dk_callee;
 extern void do_nop(void) __z88dk_callee;
+extern void vdp_write_byte(const unsigned char *src) __z88dk_fastcall;
+extern uint8_t vdp_read_byte() __z88dk_callee;
 
 /**
  * Sets the VDP write address to prepare for sequential VRAM output.

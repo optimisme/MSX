@@ -64,7 +64,8 @@
         "*.c_old": "c",
         "*.c_old2": "c",
         "*.h_old": "c",
-        "alphabet_bitmap.h": "c"
+        "alphabet_bitmap.h": "c",
+        "gsnake.h": "c"
     },
     "C_Cpp.errorSquiggles": "disabled",
     "cmake.sourceDirectory": "/Users/albertpalaciosjimenez/Desktop/msx/z88dk-msx/ext/Unity"
