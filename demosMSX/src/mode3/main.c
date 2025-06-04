@@ -146,7 +146,7 @@ void main(void) {
 
         draw_line(0, 0, 63, 47, IDX_BLACK);
         draw_line(63, 0, x, 47, IDX_BLUE);
-        draw_circle(x, 23, 10, IDX_GREEN);
+        //draw_circle(x, 23, 10, IDX_GREEN);
 
         x++;
         if (x >= 64) x = 0;

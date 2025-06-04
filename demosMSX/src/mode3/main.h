@@ -3,7 +3,7 @@
 
 #include <msx.h>
 #include <stdint.h>
-#include "../utils/fps.h"
+#include "../utils/utils_fps.h"
 #include "../utils/utils_msx.h"
 
 // Posa la pantalla en Screen 3 i dibuixa un quadrat al centre
