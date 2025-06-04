@@ -59,6 +59,7 @@ void fill_buffer_row(uint16_t map_row, uint8_t buf_row_idx) {
     }
 }
 
+
 void write_buffer_to_vram(uint8_t frame) {
     uint8_t *buf = vdp_buffer[frame];
 

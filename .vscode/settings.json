@@ -65,7 +65,11 @@
         "*.c_old2": "c",
         "*.h_old": "c",
         "alphabet_bitmap.h": "c",
-        "gsnake.h": "c"
+        "gsnake.h": "c",
+        "map": "c",
+        "unordered_map": "c",
+        "utils_fps.h": "c",
+        "utils_random.h": "c"
     },
     "C_Cpp.errorSquiggles": "disabled",
     "cmake.sourceDirectory": "/Users/albertpalaciosjimenez/Desktop/msx/z88dk-msx/ext/Unity"

@@ -1,0 +1,75 @@
+#pragma bank 4
+#include "gSnake.h"
+
+// Bases de VRAM per a Screen Mode 3
+#define PT_BASE 0x0000   // Pattern Generator Table a 0x0000
+#define NT_BASE 0x0800   // Name Table a  0x0800
+#define NT_W    32
+#define NT_H    24
+
+static uint8_t next_pattern = 2;  // Començarem a clonar a partir de pattern 2
+
+static void load_solid_patterns(void) __banked {
+    // Create one solid pattern per color (indices 1..16)
+    for (uint8_t c = 0; c < 16; c++) {
+        uint8_t idx = c;                    // pattern index 1..16
+        uint8_t byte_val = (c << 4) | c;    // both nibbles = color c
+        vdp_set_address(PT_BASE + (idx * 8));
+        for (int i = 0; i < 8; i++) {
+            vdp_write_byte(byte_val);       // write 8 bytes of same value
+        }
+    }
+}
+
+static void fill_screen_with(uint8_t pattern_idx) __banked {
+    // Cada casella (2×2) rep el pattern_idx
+    vdp_set_address(NT_BASE);
+    for (uint16_t i = 0; i < NT_W * NT_H; i++) {
+        vdp_write_byte(pattern_idx);
+    }
+}
+
+static void draw_pixel(uint8_t x, uint8_t y, uint8_t color) __banked {
+    // Mode 3 logical resolution = 64×48
+    if (x >= 64 || y >= 48) return;
+
+    // Cada "pixel" de Mode 3 = tile 2×2 → calculem tile index
+    uint8_t tile_x = x >> 1;
+    uint8_t tile_y = y >> 1;
+    uint16_t tile_index = tile_y * NT_W + tile_x;
+
+    vdp_set_address(NT_BASE + tile_index);
+    vdp_write_byte(color);
+}
+
+void main_gSnake(void) __banked {
+    init_fps();
+    vdp_set_screen_mode(3);
+
+    load_solid_patterns(); 
+    fill_screen_with(COLOR_BLACK);
+
+    // Ara hauríem de veure tota la pantalla taronja. Per comprovar el draw_pixel:
+    draw_pixel(10, 10, COLOR_DARK_GREEN); 
+    draw_pixel(20, 20, COLOR_DARK_YELLOW); 
+    draw_pixel(30, 30, COLOR_CYAN);
+
+    for (uint16_t x = 0; x < 64; x++) {
+        draw_pixel(x, 0, COLOR_MAGENTA);
+    }
+    for (uint16_t x = 0; x < 32; x++) {
+        draw_pixel(x, 2, COLOR_MAGENTA);
+    }
+/*
+    // Mirar un “bloc” 2×2 diferents a (0,0),(0,1),(1,0),(1,1):
+    draw_pixel(0, 0, COLOR_LIGHT_YELLOW);
+    draw_pixel(0, 1, COLOR_DARK_RED);
+    draw_pixel(1, 0, COLOR_DARK_GREEN);
+    draw_pixel(1, 1, COLOR_DARK_BLUE);
+*/
+    for (;;) {
+        if (wait_fps()) {
+            // loop… si vols anar dibuixant més tard
+        }
+    }
+}

@@ -3,8 +3,8 @@
 
 #include "banks.h"
 #include "buffers.h"
-#include "../utils/fps.h"
-#include "../utils/random.h"
+#include "../utils/utils_fps.h"
+#include "../utils/utils_random.h"
 
 void flush_keyboard(void) {
     suspend_interrupts();

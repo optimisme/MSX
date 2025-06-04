@@ -1,5 +1,5 @@
 // random.c
-#include "random.h"
+#include "utils_random.h"
 
 RANDOM_t random_buff[1] = {
     { .lfsr = 0xACE1u, .last_frame = 0 }

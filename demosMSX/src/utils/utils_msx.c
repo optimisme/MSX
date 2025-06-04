@@ -8,16 +8,17 @@
  */
 uint current_screen_mode = 0xFF;
 void vdp_set_screen_mode(uint8_t value) {
-
     if (current_screen_mode == value) return;
     current_screen_mode = value;
-
-    // Switch to the defined screen mode
     msx_screen(value);
-
-    if (value == 2) {
-        vdp_set_reg(3, 0xFF); // Set color table base
-        vdp_set_reg(4, 0x03); // Set pattern table base
+    
+    if (value == 2) { // SCREEN 2
+        vdp_set_reg(3, 0xFF); // CT = 3FC0h
+        vdp_set_reg(4, 0x03); // PT = 1800h
+    } else if (value == 3) { // SCREEN 3 - Multicolor Mode
+        vdp_set_reg(0, 0x00);   // R#0 b00000000: desactiva text & grafics no-MC
+        vdp_set_reg(2, 0x02);   // Name Table = 0x0800
+        vdp_set_reg(4, 0x00);   // Pattern Table = 0x0000
     }
 }
 
@@ -273,4 +274,20 @@ void vdp_write_text_color(uint8_t x_pos,
         msx_vpoke(color_address++, attribute);
     }
 #endif
+}
+
+void vdp_display_off(void) {
+    uint8_t r1 = vdp_get_reg(1);
+    vdp_set_reg(1, r1 | 0x40);
+
+    uint8_t i;
+    for (i = 0; i < 6; ++i) { do_nop(); }
+}
+
+void vdp_display_on(void) {
+    uint8_t r1 = vdp_get_reg(1);
+    vdp_set_reg(1, r1 & 0xBF);
+
+    uint8_t i;
+    for (i = 0; i < 6; ++i) { do_nop(); }
 }

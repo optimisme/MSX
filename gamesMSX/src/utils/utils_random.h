@@ -3,7 +3,7 @@
 #define RANDOM_H
 
 #include <stdint.h>
-#include "fps.h"
+#include "utils_fps.h"
 #include "utils_msx.h"
 
 typedef struct {

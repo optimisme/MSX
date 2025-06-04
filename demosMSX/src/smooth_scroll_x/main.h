@@ -6,10 +6,10 @@
 #include <video/tms99x8.h>
 
 #include "constants.h"
-#include "fps.h"
 #include "loading.h"
 #include "sprites.h"
 #include "tiles.h"
+#include "../utils/utils_fps.h"
 #include "../utils/utils_msx.h"
 
 #endif

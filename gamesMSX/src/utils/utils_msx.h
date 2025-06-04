@@ -30,6 +30,9 @@
 #define MODE_2_PT_REG_BANK1  0x07   // 0x0000 + 1*0x800
 #define MODE_2_PT_REG_BANK2  0x0B   // 0x0000 + 2*0x800
 
+#define MODE_3_VRAM_PATTERN_BASE     0x0000  
+#define MODE_3_TILEMAP_BASE          0x0800
+
 // Ports
 #define VDP_DATA_PORT           0x98
 #define VDP_CTRL_PORT           0x99
@@ -75,6 +78,8 @@ extern void resume_interrupts(void) __z88dk_callee;
 extern void do_nop(void) __z88dk_callee;
 extern void vdp_write_byte(const unsigned char *src) __z88dk_fastcall;
 extern uint8_t vdp_read_byte() __z88dk_callee;
+extern void vdp_write_bytes_otir(const uint8_t *src, uint16_t len) __z88dk_callee;
+
 
 /**
  * Sets the VDP write address to prepare for sequential VRAM output.
@@ -252,5 +257,8 @@ void vdp_write_number(uint8_t x_pos, uint8_t y_pos, uint16_t number);
  * @param bg_color         Background (paper) color code (0–15)
  */
 void vdp_write_text_color(uint8_t x_pos, uint8_t y_pos, const char *text, uint8_t fg_color, uint8_t bg_color);
+
+void vdp_display_off(void);
+void vdp_display_on(void);
 
 #endif

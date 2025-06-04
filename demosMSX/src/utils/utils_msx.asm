@@ -15,6 +15,21 @@ _vdp_set_address:
     ENDR
     ret
 
+PUBLIC _vdp_write_byte
+_vdp_write_byte:
+    ld   c, DATA_PORT
+    ld   a, l 
+    out  (c), a
+    ret
+
+PUBLIC _vdp_read_byte
+_vdp_read_byte:
+    ld c, DATA_PORT
+    in a, (c)
+    ld l, a        
+    ld h, 0        
+    ret
+
 PUBLIC _vdp_write_bytes
 _vdp_write_bytes:
     pop  bc 
@@ -33,6 +48,31 @@ vwb_loop:
     jr   nz, vwb_loop
     ret 
     
+PUBLIC _vdp_write_bytes_otir
+_vdp_write_bytes_otir:
+    pop  bc          ; ret
+    pop  de          ; len  (DE)
+    pop  hl          ; src  (HL)
+    push bc
+    ld   c, DATA_PORT
+
+vwbf_loop256:
+    ld   a, d
+    or   e           ; len == 0?
+    ret  z
+    ld   b, 0        ; 256
+    ld   a, d
+    or   a
+    jr   z, vwbf_last
+    otir             ; 256-byte burst
+    dec  d
+    jp   vwbf_loop256
+
+vwbf_last:
+    ld   b, e        ; remainder (<256)
+    otir
+    ret
+
 PUBLIC _vdp_blast_line
 _vdp_blast_line:
     ld c, DATA_PORT           

@@ -1,37 +1,28 @@
-#pragma bank 4
-#include "gSnake.h"
-
-// Bases de VRAM per a Screen Mode 3
-#define PT_BASE 0x0000 // Pattern Generator Table a 0x0000
-#define NT_BASE 0x0800 // Name Table a 0x0800
-#define NT_W 32
-#define NT_H 24
+#include "main.h"
 
 #define VIEW_W   32
 #define VIEW_H   24
+#define BUFFER_SIZE (VIEW_W * VIEW_H)
 
-static uint8_t nt_buffer[VIEW_W * VIEW_H];
-static uint8_t pattern_lookup[4][4][4][4];
+#define IDX_BLACK 0
+#define IDX_RED   1
+#define IDX_GREEN 2 
+#define IDX_BLUE  3
 
-
-// Define your 4-color palette here
 static const uint8_t palette[4] = {
-    COLOR_BLACK,      // índex 0
-    COLOR_DARK_RED,   // índex 1
-    COLOR_DARK_GREEN, // índex 2
-    COLOR_DARK_BLUE   // índex 3
+    COLOR_BLACK,
+    COLOR_DARK_RED,
+    COLOR_DARK_GREEN,
+    COLOR_DARK_BLUE
 };
 
-#define IDX_COLOR_BLACK      0 // Índex de COLOR_BLACK
-#define IDX_COLOR_DARK_RED   1 // Índex de COLOR_DARK_RED
-#define IDX_COLOR_DARK_GREEN 2 // Índex de COLOR_DARK_GREEN
-#define IDX_COLOR_DARK_BLUE  3 // Índex de COLOR_DARK_BLUE
+static uint8_t nt_buffer[BUFFER_SIZE];
+static uint8_t pattern_lookup[4][4][4][4];
 
 static const uint8_t shift_tbl[4] = {6,4,2,0};
 static const uint8_t mask_tbl[4]  = {0x3F,0xCF,0xF3,0xFC};
 
-
-void load_all_subpatterns(void) __banked {
+void load_all_subpatterns(void) {
     // Generate all 4⁴ = 256 subpatterns
     for (uint8_t i0 = 0; i0 < 4; i0++) {
         for (uint8_t i1 = 0; i1 < 4; i1++) {
@@ -39,7 +30,7 @@ void load_all_subpatterns(void) __banked {
                 for (uint8_t i3 = 0; i3 < 4; i3++) {
                     uint16_t idx = (i0 << 6) | (i1 << 4) | (i2 << 2) | i3;
                     
-                    // Usar els valors dels colors de la paleta
+                    // Use palette colors
                     uint8_t c0 = palette[i0];
                     uint8_t c1 = palette[i1];
                     uint8_t c2 = palette[i2];
@@ -54,7 +45,7 @@ void load_all_subpatterns(void) __banked {
                     buf[4] = buf[0]; buf[5] = buf[1];
                     buf[6] = buf[0]; buf[7] = buf[1];
                     
-                    vdp_set_address(PT_BASE + (idx * 8));
+                    vdp_set_address(MODE_3_VRAM_PATTERN_BASE + (idx * 8));
                     vdp_write_bytes(buf, 8);
                 }
             }
@@ -62,7 +53,7 @@ void load_all_subpatterns(void) __banked {
     }
 }
 
-void init_pattern_lookup(void) __banked {
+void init_pattern_lookup(void) {
     for (uint8_t i0 = 0; i0 < 4; i0++) {
         for (uint8_t i1 = 0; i1 < 4; i1++) {
             for (uint8_t i2 = 0; i2 < 4; i2++) {
@@ -74,26 +65,26 @@ void init_pattern_lookup(void) __banked {
     }
 }
 
-void fill_buffer_with(uint8_t color_index) __banked {
+void fill_buffer_with(uint8_t color_index) {
     uint8_t pat = pattern_lookup[color_index][color_index][color_index][color_index];
-    memset(nt_buffer, pat, VIEW_W * VIEW_H);
+    memset(nt_buffer, pat, BUFFER_SIZE);
 }
 
-
-void draw_pixel_to_buffer(uint8_t x, uint8_t y, uint8_t col) __banked {
+void draw_pixel_to_buffer(uint8_t x, uint8_t y, uint8_t col) {
     if (x>=64 || y>=48) return;
+
     uint16_t idx = (y>>1)*VIEW_W + (x>>1);
     uint8_t q = ((y&1)<<1) | (x&1);  
     uint8_t pat = nt_buffer[idx];
+    
     pat = (pat & mask_tbl[q]) | (col << shift_tbl[q]);
+    
     if (pat != nt_buffer[idx]) {
         nt_buffer[idx] = pat;
     }
 }
 
-void draw_line(uint8_t x0, uint8_t y0,
-               uint8_t x1, uint8_t y1,
-               uint8_t col) __banked {
+void draw_line(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, uint8_t col) {
     int dx = abs((int)x1 - x0);
     int dy = -abs((int)y1 - y0);
     int sx = x0 < x1 ? 1 : -1;
@@ -109,7 +100,7 @@ void draw_line(uint8_t x0, uint8_t y0,
     }
 }
 
-void draw_circle(uint8_t cx, uint8_t cy, uint8_t r, uint8_t col) __banked {
+void draw_circle(uint8_t cx, uint8_t cy, uint8_t r, uint8_t col) {
     int x = r;
     int y = 0;
     int err = 1 - x;
@@ -131,12 +122,12 @@ void draw_circle(uint8_t cx, uint8_t cy, uint8_t r, uint8_t col) __banked {
     }
 }
 
-static void update_vram_from_buffer(void) __banked {
-    vdp_set_address(NT_BASE);
-    vdp_write_bytes_otir(&nt_buffer[0], VIEW_W * VIEW_H);
+static void update_vram_from_buffer(void) {
+    vdp_set_address(MODE_3_TILEMAP_BASE);
+    vdp_write_bytes_otir(&nt_buffer[0], BUFFER_SIZE);
 }
 
-void main_gSnake(void) __banked {
+void main(void) {
     init_fps();
     vdp_set_screen_mode(3);
     load_all_subpatterns(); 
@@ -146,16 +137,16 @@ void main_gSnake(void) __banked {
     for (;;) {
         if (wait_fps()) { continue; }
 
-        fill_buffer_with(IDX_COLOR_DARK_RED);
+        fill_buffer_with(IDX_RED);
     
-        draw_pixel_to_buffer(20, 10, IDX_COLOR_BLACK);
-        draw_pixel_to_buffer(20, 11, IDX_COLOR_DARK_GREEN);
-        draw_pixel_to_buffer(21, 10, IDX_COLOR_DARK_BLUE);
-        draw_pixel_to_buffer(21, 11, IDX_COLOR_BLACK);
+        draw_pixel_to_buffer(20, 10, IDX_BLACK);
+        draw_pixel_to_buffer(20, 11, IDX_GREEN);
+        draw_pixel_to_buffer(21, 10, IDX_BLUE);
+        draw_pixel_to_buffer(21, 11, IDX_BLACK);
 
-        draw_line(0, 0, 63, 47, IDX_COLOR_DARK_BLUE);
-        draw_line(63, 0, x, 47, IDX_COLOR_DARK_BLUE);
-        draw_circle(x, 23, 10, IDX_COLOR_DARK_GREEN);
+        draw_line(0, 0, 63, 47, IDX_BLACK);
+        draw_line(63, 0, x, 47, IDX_BLUE);
+        draw_circle(x, 23, 10, IDX_GREEN);
 
         x++;
         if (x >= 64) x = 0;

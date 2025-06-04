@@ -5,8 +5,8 @@
 #include "g2048_bitmap.h"
 #include "g2048_sprites.h"
 #include "../buffers.h"
-#include "../../utils/fps.h"
-#include "../../utils/random.h"
+#include "../../utils/utils_fps.h"
+#include "../../utils/utils_random.h"
 #include "../../utils/utils_msx.h"
 
 typedef struct {
