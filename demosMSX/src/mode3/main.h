@@ -3,6 +3,7 @@
 
 #include <msx.h>
 #include <stdint.h>
+#include "assembly.h"
 #include "../utils/utils_fps.h"
 #include "../utils/utils_msx.h"
 

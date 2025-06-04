@@ -16,11 +16,16 @@ static const uint8_t palette[4] = {
     COLOR_DARK_BLUE
 };
 
-static uint8_t nt_buffer[BUFFER_SIZE];
-static uint8_t pattern_lookup[4][4][4][4];
+uint8_t nt_buffer[BUFFER_SIZE];
 
-static const uint8_t shift_tbl[4] = {6,4,2,0};
-static const uint8_t mask_tbl[4]  = {0x3F,0xCF,0xF3,0xFC};
+uint16_t row_base[48];
+const uint8_t mask_tbl[4]  = {0x3F,0xCF,0xF3,0xFC};
+const uint8_t set_tbl[4][4] = {
+    {0x00,0x40,0x80,0xC0},   /* q=0  bits 7-6 */
+    {0x00,0x10,0x20,0x30},   /* q=1  bits 5-4 */
+    {0x00,0x04,0x08,0x0C},   /* q=2  bits 3-2 */
+    {0x00,0x01,0x02,0x03}    /* q=3  bits 1-0 */
+};
 
 void load_all_subpatterns(void) {
     // Generate all 4⁴ = 256 subpatterns
@@ -53,35 +58,28 @@ void load_all_subpatterns(void) {
     }
 }
 
-void init_pattern_lookup(void) {
-    for (uint8_t i0 = 0; i0 < 4; i0++) {
-        for (uint8_t i1 = 0; i1 < 4; i1++) {
-            for (uint8_t i2 = 0; i2 < 4; i2++) {
-                for (uint8_t i3 = 0; i3 < 4; i3++) {
-                    pattern_lookup[i0][i1][i2][i3] = (i0 << 6) | (i1 << 4) | (i2 << 2) | i3;
-                }
-            }
-        }
-    }
+void init_row_base(void)
+{
+    for (uint8_t y = 0; y < 48; ++y)   /* (y>>1)*32   */
+        row_base[y] = ((y >> 1) << 5);
 }
 
 void fill_buffer_with(uint8_t color_index) {
-    uint8_t pat = pattern_lookup[color_index][color_index][color_index][color_index];
+    uint8_t pat = (color_index << 6) | (color_index << 4) | (color_index << 2) | color_index;
     memset(nt_buffer, pat, BUFFER_SIZE);
 }
 
 void draw_pixel_to_buffer(uint8_t x, uint8_t y, uint8_t col) {
-    if (x>=64 || y>=48) return;
+    //return draw_pixel_to_buffer_asm(x, y, col);
 
-    uint16_t idx = (y>>1)*VIEW_W + (x>>1);
-    uint8_t q = ((y&1)<<1) | (x&1);  
-    uint8_t pat = nt_buffer[idx];
-    
-    pat = (pat & mask_tbl[q]) | (col << shift_tbl[q]);
-    
-    if (pat != nt_buffer[idx]) {
-        nt_buffer[idx] = pat;
-    }
+    if (x >= 64 || y >= 48) return;
+
+    uint16_t idx = row_base[y] + (x >> 1);          /* 1 suma, 1 shift */
+    uint8_t  q   = ((y & 1) << 1) | (x & 1);        /* quadrant 0-3   */
+
+    uint8_t old  = nt_buffer[idx];
+    uint8_t pat  = (old & mask_tbl[q]) | set_tbl[q][col];
+    nt_buffer[idx] = pat;                           /* escrivim sempre */
 }
 
 void draw_line(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, uint8_t col) {
@@ -124,16 +122,17 @@ void draw_circle(uint8_t cx, uint8_t cy, uint8_t r, uint8_t col) {
 
 static void update_vram_from_buffer(void) {
     vdp_set_address(MODE_3_TILEMAP_BASE);
-    vdp_write_bytes_otir(&nt_buffer[0], BUFFER_SIZE);
+    vdp_write_bytes_otir(nt_buffer, BUFFER_SIZE);
 }
 
 void main(void) {
     init_fps();
     vdp_set_screen_mode(3);
     load_all_subpatterns(); 
-    init_pattern_lookup();
+    init_row_base();
     
-    uint8_t x = 32;
+    uint8_t x = 32, y = 24;
+    bool direction = true;
     for (;;) {
         if (wait_fps()) { continue; }
 
@@ -145,11 +144,31 @@ void main(void) {
         draw_pixel_to_buffer(21, 11, IDX_BLACK);
 
         draw_line(0, 0, 63, 47, IDX_BLACK);
-        draw_line(63, 0, x, 47, IDX_BLUE);
-        //draw_circle(x, 23, 10, IDX_GREEN);
+        draw_line(32, 0, x, y, IDX_BLUE);
+        draw_circle(x, y, 5, IDX_GREEN);
 
-        x++;
+        if (direction) {
+            x++;
+            if (x >= 63) {
+                direction = false;
+            }
+        } else {
+            x--;
+            if (x <= 0) {
+                direction = true;
+            }
+        }
         if (x >= 64) x = 0;
+
+        uint8_t stick  = msx_get_stick(0);
+        switch(stick) {
+            case STICK_DOWN:    
+                y += 1;
+                break;
+            case STICK_UP: 
+                y -= 1;
+                break;  
+        }   
 
         update_vram_from_buffer();
     }

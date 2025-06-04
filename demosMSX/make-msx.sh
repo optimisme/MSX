@@ -52,6 +52,7 @@ compile() {
         background|bitmap|mode3|scroll|smooth_scroll_x|smooth_scroll_x2|smooth_scroll_y)
             zcc +msx -create-app -subtype=rom -lmsxbios \
                      -O3 --opt-code-speed \
+                src/$target/*.asm \
                 src/$target/*.c \
                 src/utils/*.asm \
                 src/utils/*.c \

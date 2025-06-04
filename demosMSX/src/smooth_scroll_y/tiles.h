@@ -2,10 +2,11 @@
 #define TILES_H
 
 #include "constants.h"
+#include "assembly.h"
 #include "../utils/utils_msx.h"
 
 #define NUM_TILE_TYPES  5
-#define TILEMAP_W       32   
+#define TILEMAP_W       32
 #define TILEMAP_H       125
 #define VIEW_W          32
 #define VIEW_H          24

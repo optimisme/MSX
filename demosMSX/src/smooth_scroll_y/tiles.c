@@ -36,6 +36,8 @@ const uint8_t bg_static[NUM_TILE_TYPES] = {
 };
 
 void fill_buffer_row(uint16_t map_row, uint8_t buf_row_idx) {
+    // return fill_buffer_row_asm(map_row, buf_row_idx);
+
     // Assegurem-nos que map_row està dins dels límits
     if (map_row >= TILEMAP_H)
         map_row = TILEMAP_H - 1;
@@ -58,7 +60,6 @@ void fill_buffer_row(uint16_t map_row, uint8_t buf_row_idx) {
         b3[x] = lut[3][col];
     }
 }
-
 
 void write_buffer_to_vram(uint8_t frame) {
     uint8_t *buf = vdp_buffer[frame];
