@@ -51,6 +51,10 @@ void main(void){
 
         if(!key) draw_lineB(prevBX,prevBY,bx1,by1,1);
 
+        for (uint8_t a = 0; a < 48; a = a + 16) {
+            draw_lineB(a, 0, a + 10, 10, COLOR_CYAN);
+        }
+
         prevBX=bx1; prevBY=by1;
 
         write_buffer_to_vram();
