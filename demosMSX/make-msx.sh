@@ -13,7 +13,7 @@ machine_param="$3"
 
 # Comprovació d'ús
 if [ "$#" -lt 2 ] || [ "$#" -gt 3 ]; then
-    echo "Usage:    $0 {compile|run} {background|bank_mapper|bitmap|mode3|hello|scroll|smooth_scroll_x|smooth_scroll_y} [phillips]"
+    echo "Usage:    $0 {compile|run} {background|bank_mapper|bitmap|bitmap_buffer|mode3|mode3_subpixel|mode3_subpixel_b|hello|scroll|smooth_scroll_x|smooth_scroll_y} [phillips]"
     echo "Examples: $0 compile scroll"
     echo "          $0 run scroll phillips"
     exit 1
@@ -45,16 +45,13 @@ compile() {
         hello)
             zcc +msx -create-app -subtype=rom -lmsxbios \
                 "src/$target/main.c" \
-                src/utils/*.asm \
                 src/utils/*.c \
                 -o "$out_dir/app"
             ;;
-        background|bitmap|mode3|scroll|smooth_scroll_x|smooth_scroll_x2|smooth_scroll_y)
+        background|bitmap|bitmap_buffer|mode3|mode3_subpixel|mode3_subpixel_b|scroll|smooth_scroll_x|smooth_scroll_x2|smooth_scroll_y)
             zcc +msx -create-app -subtype=rom -lmsxbios \
                      -O3 --opt-code-speed \
-                src/$target/*.asm \
                 src/$target/*.c \
-                src/utils/*.asm \
                 src/utils/*.c \
                 -o "$out_dir/app"
             ;;

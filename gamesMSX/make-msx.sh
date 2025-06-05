@@ -61,9 +61,7 @@ compile() {
                     -create-app -subtype=rom -lmsxbios \
                     -pragma-define:MAPPER_ASCII16 \
                     -O3 --opt-code-speed \
-                src/$target/*.asm \
                 src/$target/*.c \
-                src/$target/*/*.asm \
                 src/$target/*/*.c \
                 src/utils/*.asm \
                 src/utils/*.c \

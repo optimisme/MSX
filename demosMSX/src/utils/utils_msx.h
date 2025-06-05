@@ -79,7 +79,7 @@ extern void do_nop(void) __z88dk_callee;
 extern void vdp_write_byte(const unsigned char *src) __z88dk_fastcall;
 extern uint8_t vdp_read_byte() __z88dk_callee;
 extern void vdp_write_bytes_otir(const uint8_t *src, uint16_t len) __z88dk_callee;
-
+extern void write_patterns_fast(const void *src) __naked __z88dk_fastcall;
 
 /**
  * Sets the VDP write address to prepare for sequential VRAM output.
