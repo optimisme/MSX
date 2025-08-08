@@ -1,8 +1,6 @@
 #pragma bank 2
 
-#include "g2048.h"
-#include <string.h>   
-#include <conio.h>
+#include "g_2048.h"
 
 #define b_key               (vars_buff[0])
 #define b_stick             (vars_buff[1])
@@ -39,18 +37,10 @@
 #define SPRITE(i)           ((SPRITE_t*)&vars_buff[SPRITE_BASE_POS + (i) * SPRITES_VARS_SIZE])
 #define PATTERN_SLOT(i)     ((i) * 4)
 
-#define ALPHABET_BASE       64
-#define INVALID_CHAR        0xFF
-#define FIRST_CHAR          0x20
-#define LAST_CHAR           (FIRST_CHAR + ALPHABET_BITMAP_TILE_COUNT - 1)
-#define CHAR_TO_INDEX(c)    (((c) >= FIRST_CHAR && (c) <= LAST_CHAR) \
-                                ? ((uint8_t)(c) - FIRST_CHAR)       \
-                                : INVALID_CHAR) 
-
 
 #define WIN_VALUE           2048
 
-void main_g2048() __banked {
+void main_g_2048() __banked {
     init_fps();
     init_game();
 
@@ -64,29 +54,18 @@ void main_g2048() __banked {
 }
 
 void init_game() __banked {
-    vdp_set_screen_mode(2);
 
-    // Set EMPTY background tilemap (while loading resources)
+    // Set tilemap to blank
+    vdp_set_screen_mode(2);
     vdp_set_address(MODE_2_TILEMAP_BASE);
     vdp_blast_tilemap(vdp_tilemap_buff);
 
     // Load 'background' tileset
     for (uint8_t bank = 0; bank < 3; ++bank) {
         uint16_t bank_base = bank * 256;
-        for (uint16_t i = 0; i < G2048_BITMAP_TILE_COUNT; ++i) {
+        for (uint16_t i = 0; i < G_2048_BITMAP_TILE_COUNT; ++i) {
             uint16_t global_idx = bank_base + i;
-            const uint8_t *src = &g2048_bitmap_tileset[i][0];
-            uint8_t *dst = &vdp_global_buff[global_idx * 8];
-            memcpy(dst, src, 8);
-        }
-    }
-
-    // Load 'alphabet' tileset
-    for (uint8_t bank = 0; bank < 3; ++bank) {
-        uint16_t bank_base = bank * 256;
-        for (uint16_t i = 0; i < ALPHABET_BITMAP_TILE_COUNT; ++i) {
-            uint16_t global_idx = bank_base + ALPHABET_BASE + i;
-            const uint8_t *src = &alphabet_bitmap_tileset[i][0];
+            const uint8_t *src = &g_2048_bitmap_tileset[i][0];
             uint8_t *dst = &vdp_global_buff[global_idx * 8];
             memcpy(dst, src, 8);
         }
@@ -96,22 +75,13 @@ void init_game() __banked {
     vdp_set_address(MODE_2_VRAM_PATTERN_BASE);
     vdp_write_bytes(vdp_global_buff, VDP_GLOBAL_SIZE);
 
+    load_alphabet_tileset();
+
     // Set 'background' colors
     for (uint8_t bank = 0; bank < 3; ++bank) {
         uint16_t bank_base = bank * 256;
-        for (uint16_t i = 0; i < G2048_BITMAP_TILE_COUNT; ++i) {
+        for (uint16_t i = 0; i < G_2048_BITMAP_TILE_COUNT; ++i) {
             uint16_t global_idx = bank_base + i;
-            for (uint8_t y = 0; y < 8; ++y) {
-                vdp_global_buff[global_idx * 8 + y] = (COLOR_WHITE << 4) | COLOR_BLACK;
-            }
-        }
-    }
-
-    // Set 'alphabet' colors
-    for (uint8_t bank = 0; bank < 3; ++bank) {
-        uint16_t bank_base = bank * 256;
-        for (uint16_t i = 0; i < ALPHABET_BITMAP_TILE_COUNT; ++i) {
-            uint16_t global_idx = bank_base + ALPHABET_BASE + i;
             for (uint8_t y = 0; y < 8; ++y) {
                 vdp_global_buff[global_idx * 8 + y] = (COLOR_WHITE << 4) | COLOR_BLACK;
             }
@@ -122,22 +92,15 @@ void init_game() __banked {
     vdp_set_address(MODE_2_VRAM_COLOR_BASE);
     vdp_write_bytes(vdp_global_buff, VDP_GLOBAL_SIZE);
 
-    // Set background tilemap to 'vdp_tilemap_buff'
-    /*
-    memcpy(vdp_tilemap_buff, g2048_bitmap_tilemap, sizeof(vdp_tilemap_buff));
-    write_text_to_tilemap_buff("(E)xit game", 23 * 32);
-    write_text_to_tilemap_buff("(R)estart", 23 * 32 + 23);
-    vdp_set_address(MODE_2_TILEMAP_BASE);
-    vdp_blast_tilemap(vdp_tilemap_buff);
-    */
+    load_alphabet_colors();
 
     // Push the complete buffer to VRAM
     vdp_set_address(MODE_2_TILEMAP_BASE);
-    vdp_blast_tilemap(g2048_bitmap_tilemap);
-    write_text_to_vram("(E)xit game", 23 * 32);
-    write_text_to_vram("(R)estart", 23 * 32 + 23);
+    vdp_blast_tilemap(g_2048_bitmap_tilemap);
+    const uint16_t y = (23 * 32);
+    write_text_to_vram("(E)xit game", y);
+    write_text_to_vram("(R)estart", 23 + y);
     
-
     load_sprite_patterns();
     set_sprites_config(true, true);
 
@@ -227,35 +190,12 @@ void update_game() __banked {
     }
 }
 
-void write_text_to_vram(const char *text, uint16_t pos) __banked {
-    // build a small buffer of tile-indices
-    uint8_t buf[32];
-    uint16_t len = 0;
-    for (uint16_t i = 0; text[i] && i < sizeof(buf); ++i) {
-        uint8_t idx = CHAR_TO_INDEX(text[i]);
-        if (idx == INVALID_CHAR) continue;
-        buf[len++] = ALPHABET_BASE + idx;
-    }
-    // point VDP to tilemap position
-    vdp_set_address(MODE_2_TILEMAP_BASE + pos);
-    // write them straight into VRAM
-    vdp_write_bytes(buf, len);
-}
-
-void write_text_to_tilemap_buff(const char *text, uint16_t pos) __banked {
-    for (uint16_t i = 0; text[i]; ++i) {
-        uint8_t idx = CHAR_TO_INDEX(text[i]);
-        if (idx == INVALID_CHAR) continue;
-        vdp_tilemap_buff[pos + i] = ALPHABET_BASE + idx;
-    }
-}
-
 void load_sprite_patterns(void) __banked {
-    for (uint8_t sprite_idx = 0; sprite_idx < G2048_SPRITES_SPRITE_COUNT; ++sprite_idx) {
+    for (uint8_t sprite_idx = 0; sprite_idx < G_2048_SPRITES_SPRITE_COUNT; ++sprite_idx) {
         uint8_t pat = sprite_idx * 4; 
         uint16_t addr = MODE_2_SPRITES_PATTERN_BASE + (pat << 3); 
         for (uint8_t d = 0; d < 32; ++d) {
-            msx_vpoke(addr + d, g2048_sprites_bitmap_spriteset[sprite_idx][d]);
+            msx_vpoke(addr + d, g_2048_sprites_bitmap_spriteset[sprite_idx][d]);
         }
     }
 }

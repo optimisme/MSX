@@ -1,4 +1,3 @@
-#pragma bank 2
 #ifndef ALPHABET_BITMAP_H
 #define ALPHABET_BITMAP_H
 

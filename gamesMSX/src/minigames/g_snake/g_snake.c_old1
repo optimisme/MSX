@@ -1,0 +1,195 @@
+#include "g_snake.h"
+#include <stdbool.h>
+#include <string.h>
+
+#define GRID_W 32
+#define GRID_H 24
+#define MAX_LEN 128
+
+#define TILE_BLANK  0x00
+#define TILE_SNAKE  0x01
+#define TILE_FOOD   0x02
+#define TILE_BORDER 0x03
+
+#define BOARD_X 2
+#define BOARD_Y 2
+#define BOARD_W 28  // from x=2 to x=29 inclusive
+#define BOARD_H 20  // from y=2 to y=21 inclusive
+
+static uint8_t snake_x[MAX_LEN];
+static uint8_t snake_y[MAX_LEN];
+static uint8_t snake_len;
+static int8_t dir_x, dir_y;
+static uint8_t food_x, food_y;
+static bool game_over;
+
+static void init_tiles(void);
+static void set_tile(uint8_t x, uint8_t y, uint8_t t);
+static void place_food(void);
+static void init_game(void);
+static void input(void);
+static void update(void);
+static void render(void);
+
+static const uint8_t pat_blank[8] = {0};
+static const uint8_t pat_solid[8] = {0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
+static const uint8_t pat_food[8]  = {0x3C,0x7E,0xFF,0xFF,0xFF,0xFF,0x7E,0x3C};
+
+static const uint8_t col_white[8]  = {COLOR_WHITE, COLOR_WHITE, COLOR_WHITE, COLOR_WHITE,
+                                      COLOR_WHITE, COLOR_WHITE, COLOR_WHITE, COLOR_WHITE};
+static const uint8_t col_snake[8]  = {COLOR_LIGHT_GREEN, COLOR_LIGHT_GREEN, COLOR_LIGHT_GREEN, COLOR_LIGHT_GREEN,
+                                      COLOR_LIGHT_GREEN, COLOR_LIGHT_GREEN, COLOR_LIGHT_GREEN, COLOR_LIGHT_GREEN};
+static const uint8_t col_food[8] = {
+    (COLOR_DARK_GREEN << 4) | COLOR_BLACK,  /* foreground=green, background=black */
+    (COLOR_DARK_GREEN << 4) | COLOR_BLACK,
+    (COLOR_DARK_GREEN << 4) | COLOR_BLACK,
+    (COLOR_DARK_GREEN << 4) | COLOR_BLACK,
+    (COLOR_DARK_GREEN << 4) | COLOR_BLACK,
+    (COLOR_DARK_GREEN << 4) | COLOR_BLACK,
+    (COLOR_DARK_GREEN << 4) | COLOR_BLACK,
+    (COLOR_DARK_GREEN << 4) | COLOR_BLACK
+};
+
+static const uint8_t col_border[8] = {COLOR_GRAY, COLOR_GRAY, COLOR_GRAY, COLOR_GRAY,
+                                      COLOR_GRAY, COLOR_GRAY, COLOR_GRAY, COLOR_GRAY};
+
+// poke a tile into VRAM at (x,y)
+static void set_tile(uint8_t x, uint8_t y, uint8_t t) {
+    msx_vpoke(MODE_2_TILEMAP_BASE + y * GRID_W + x, t);
+}
+
+// return random coordinate inside board
+static uint8_t rand_x(void) { return BOARD_X + (random_8() % BOARD_W); }
+static uint8_t rand_y(void) { return BOARD_Y + (random_8() % BOARD_H); }
+
+static void init_tiles(void) {
+    for (uint8_t bank = 0; bank < 3; ++bank) {
+        vdp_set_tile(bank, TILE_BLANK,  pat_blank,  col_white);
+        vdp_set_tile(bank, TILE_SNAKE,  pat_solid,  col_snake);
+        vdp_set_tile(bank, TILE_FOOD,   pat_food,   col_food);
+        vdp_set_tile(bank, TILE_BORDER, pat_solid,  col_border);
+    }
+}
+
+static void init_game(void) {
+    vdp_set_screen_mode(2);
+    init_tiles();
+
+    // clear tilemap and colors
+    memset(vdp_tilemap_buff, TILE_BLANK, GRID_W * GRID_H);
+    memset(vdp_global_buff, (COLOR_WHITE<<4)|COLOR_BLACK, VDP_GLOBAL_SIZE);
+
+    // set FOOD color entries
+    for (uint8_t bank = 0; bank < 3; ++bank) {
+        uint16_t fidx = bank * 256 + TILE_FOOD;
+        for (uint8_t r = 0; r < 8; ++r)
+            vdp_global_buff[fidx*8 + r] = (col_food[r]<<4)|col_food[r];
+    }
+    // set BORDER color entries
+    for (uint8_t bank = 0; bank < 3; ++bank) {
+        uint16_t bidx = bank * 256 + TILE_BORDER;
+        for (uint8_t r = 0; r < 8; ++r)
+            vdp_global_buff[bidx*8 + r] = (col_border[r]<<4)|col_border[r];
+    }
+
+    // write buffers to VRAM
+    vdp_set_address(MODE_2_TILEMAP_BASE);
+    vdp_blast_tilemap(vdp_tilemap_buff);
+    vdp_set_address(MODE_2_VRAM_COLOR_BASE);
+    vdp_write_bytes(vdp_global_buff, VDP_GLOBAL_SIZE);
+
+    // initialize snake in board center
+    snake_len = 3;
+    snake_x[0] = BOARD_X + BOARD_W/2; snake_y[0] = BOARD_Y + BOARD_H/2;
+    snake_x[1] = snake_x[0] - 1;   snake_y[1] = snake_y[0];
+    snake_x[2] = snake_x[1] - 1;   snake_y[2] = snake_y[0];
+    dir_x = 1; dir_y = 0;
+    game_over = false;
+    place_food();
+
+    // draw snake
+    for (uint8_t i = 0; i < snake_len; ++i)
+        set_tile(snake_x[i], snake_y[i], TILE_SNAKE);
+
+    // draw gray border from (1,1) to (GRID_W-2, GRID_H-2)
+    for (uint8_t x = 1; x < GRID_W-1; ++x) {
+        set_tile(x, 1,        TILE_BORDER);
+        set_tile(x, GRID_H-2, TILE_BORDER);
+    }
+    for (uint8_t y = 1; y < GRID_H-1; ++y) {
+        set_tile(1,        y, TILE_BORDER);
+        set_tile(GRID_W-2, y, TILE_BORDER);
+    }
+
+    // hide sprites
+    uint8_t empty_pat[8] = {0};
+    for (uint8_t i = 0; i < 16; ++i)
+        vdp_update_sprite(i, empty_pat, COLOR_BLACK, 0, 0);
+}
+
+static void place_food(void) {
+    do {
+        food_x = rand_x();
+        food_y = rand_y();
+        bool hit = false;
+        for (uint8_t i = 0; i < snake_len; ++i)
+            if (snake_x[i] == food_x && snake_y[i] == food_y) { hit = true; break; }
+        if (!hit) break;
+    } while (1);
+    set_tile(food_x, food_y, TILE_FOOD);
+}
+
+static void input(void) {
+    uint8_t s = msx_get_stick(0);
+    if (s == STICK_UP    && dir_y == 0) { dir_x = 0; dir_y = -1; }
+    if (s == STICK_DOWN  && dir_y == 0) { dir_x = 0; dir_y =  1; }
+    if (s == STICK_LEFT  && dir_x == 0) { dir_x = -1; dir_y = 0; }
+    if (s == STICK_RIGHT && dir_x == 0) { dir_x =  1; dir_y = 0; }
+}
+
+static void update(void) {
+    int8_t nx = snake_x[0] + dir_x;
+    int8_t ny = snake_y[0] + dir_y;
+    // collision with gray border
+    if (nx < BOARD_X || nx >= BOARD_X + BOARD_W ||
+        ny < BOARD_Y || ny >= BOARD_Y + BOARD_H) {
+        game_over = true; return;
+    }
+    // self-collision
+    for (uint8_t i = 0; i < snake_len; ++i)
+        if (snake_x[i] == nx && snake_y[i] == ny) { game_over = true; return; }
+
+    bool eat = (nx == food_x && ny == food_y);
+    if (eat) {
+        if (snake_len < MAX_LEN) ++snake_len;
+        place_food();
+    } else {
+        set_tile(snake_x[snake_len-1], snake_y[snake_len-1], TILE_BLANK);
+    }
+
+    for (int i = snake_len-1; i > 0; --i) {
+        snake_x[i] = snake_x[i-1];
+        snake_y[i] = snake_y[i-1];
+    }
+    snake_x[0] = nx;
+    snake_y[0] = ny;
+}
+
+static void render(void) {
+    set_tile(snake_x[0], snake_y[0], TILE_SNAKE);
+}
+
+void main_g_snake(void) {
+    init_fps();
+    init_game();
+    uint8_t frame = 0;
+    const uint8_t SPEED = 8;
+
+    while (!game_over) {
+        if (wait_fps()) continue;
+        input();
+        if (++frame >= SPEED) { frame = 0; update(); render(); }
+    }
+    vdp_write_text(11,12, "GAME OVER");
+    while (msx_get_stick(0) == 0);
+}

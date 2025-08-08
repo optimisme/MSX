@@ -33,7 +33,7 @@ void main(void) {
 
         } else if (selected_bank == 2) {
 
-            main_g2048();
+            main_g_2048();
             selected_menu_option = 1;
             selected_bank = 1;
 
@@ -45,7 +45,7 @@ void main(void) {
 
         } else if (selected_bank == 4) {
 
-            main_gSnake();
+            main_g_snake();
             selected_menu_option = 3;
             selected_bank = 1;
 

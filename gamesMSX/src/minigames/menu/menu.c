@@ -16,14 +16,14 @@
 #define b_current_frame     (vars_buff[11])
 
 #define C_ANIMATION_MS      250
-#define C_POS_1_X           40
-#define C_POS_1_Y           128
-#define C_POS_2_X           40
-#define C_POS_2_Y           144
-#define C_POS_3_X           136
-#define C_POS_3_Y           128
-#define C_POS_4_X           136
-#define C_POS_4_Y           144
+#define C_POS_1_X           6
+#define C_POS_1_Y           16
+#define C_POS_2_X           6
+#define C_POS_2_Y           18
+#define C_POS_3_X           18
+#define C_POS_3_Y           16
+#define C_POS_4_X           18
+#define C_POS_4_Y           18
 
 const unsigned char sprite_arrow[8] = {
     0b11001000,
@@ -128,8 +128,12 @@ void init_menu(void) __banked {
             memcpy(dst, src, 8);
         }
     }
+
+    // Set full tileset
     vdp_set_address(MODE_2_VRAM_PATTERN_BASE);
     vdp_write_bytes(vdp_global_buff, VDP_GLOBAL_SIZE);
+
+    load_alphabet_tileset();
 
     // Set colors
     for (uint8_t bank = 0; bank < 3; ++bank) {
@@ -141,38 +145,52 @@ void init_menu(void) __banked {
             }
         }
     }
+
     vdp_set_address(MODE_2_VRAM_COLOR_BASE);
     vdp_write_bytes(vdp_global_buff, VDP_GLOBAL_SIZE);
+
+    load_alphabet_colors();
 
     // Set tilemap
     vdp_set_address(MODE_2_TILEMAP_BASE);
     vdp_blast_tilemap(menu_bitmap_tilemap);
-
+    write_text_to_vram("1.2048",    C_POS_1_X + (C_POS_1_Y << 5));
+    write_text_to_vram("2.",        C_POS_2_X + (C_POS_2_Y << 5));
+    write_text_to_vram("3.Snake",   C_POS_3_X + (C_POS_3_Y << 5));
+    write_text_to_vram("4.",        C_POS_4_X + (C_POS_4_Y << 5));
+    
     // Set sprite
     vdp_set_sprite(0, sprite_arrow, 0);
     vdp_update_sprite(0, 0, COLOR_CYAN, b_cursor_x, b_cursor_y);
 }
 
+void tile_to_pixel(uint8_t tile_x, uint8_t tile_y, uint16_t *out_x, uint16_t *out_y) {
+    *out_x = (uint16_t)tile_x << 3;
+    *out_y = (uint16_t)tile_y << 3;
+}
+
 void set_cursor_destination(uint8_t option, uint8_t animation_ms) __banked {
+
+    uint16_t px, py;
 
     switch (option) {
     case 1:
-        b_destination_x = C_POS_1_X;
-        b_destination_y = C_POS_1_Y;
+        tile_to_pixel(C_POS_1_X, C_POS_1_Y, &px, &py);
         break;
     case 2:
-        b_destination_x = C_POS_2_X;
-        b_destination_y = C_POS_2_Y;
+        tile_to_pixel(C_POS_2_X, C_POS_2_Y, &px, &py);
         break;
     case 3:
-        b_destination_x = C_POS_3_X;
-        b_destination_y = C_POS_3_Y;
+        tile_to_pixel(C_POS_3_X, C_POS_3_Y, &px, &py);
         break;
     case 4:
-        b_destination_x = C_POS_4_X;
-        b_destination_y = C_POS_4_Y;
+        tile_to_pixel(C_POS_4_X, C_POS_4_Y, &px, &py);
         break;
     }
+
+    // Offset cursor 
+    b_destination_x = px - 10;
+    b_destination_y = py - 2;
 
     b_start_x = b_cursor_x;
     b_start_y = b_cursor_y;

@@ -48,6 +48,11 @@ compile() {
                 src/utils/*.c \
                 -o "$out_dir/app"
             ;;
+        hello2)
+            zcc +msx -create-app -subtype=rom -lmsxbios \
+                "src/$target/main.c" \
+                -o "$out_dir/app"
+            ;;
         background|bitmap|bitmap_buffer|mode3|mode3_subpixel|mode3_subpixel_b|scroll|smooth_scroll_x|smooth_scroll_x2|smooth_scroll_y)
             zcc +msx -create-app -subtype=rom -lmsxbios \
                      -O3 --opt-code-speed \

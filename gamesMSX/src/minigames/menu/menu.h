@@ -4,6 +4,7 @@
 #include <conio.h>
 
 #include "menu_bitmap.h"
+#include "../alphabet/alphabet.h"
 #include "../banks.h"
 #include "../buffers.h"
 #include "../../utils/utils_fps.h"

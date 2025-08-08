@@ -1,5 +1,8 @@
 #include "utils_msx.h"
 
+#define DATA_PORT 0x98
+#define CRTL_PORT 0x99
+
 /**
  * Configure the video display processor (VDP) and set up the screen mode.
  *
@@ -290,4 +293,175 @@ void vdp_display_on(void) {
 
     uint8_t i;
     for (i = 0; i < 6; ++i) { do_nop(); }
+}
+
+void write_patterns_fast(const void *src) __naked __z88dk_fastcall
+{
+__asm
+    ; set VRAM addr
+    ld   bc, MODE_2_VRAM_PATTERN_BASE
+    ld   a, c
+    out  (CRTL_PORT), a
+    ld   a, b
+    or   0x40
+    out  (CRTL_PORT), a
+
+    ld   de, 0x1800     ; len
+    ld   c, DATA_PORT
+
+T256:
+    ld   a, d
+    or   a
+    jr   z, Tlast
+    ld   b, 0
+    otir
+    dec  d
+    jr   T256
+
+Tlast:
+    ld   b, e
+    otir
+    ret
+__endasm;
+}
+
+void vdp_set_address(unsigned int addr) __naked __z88dk_fastcall
+{
+__asm
+    ld a, l
+    out (CRTL_PORT), a        
+    ld a, h
+    or 0x40              
+    out (CRTL_PORT), a
+    REPT 12
+      nop
+    ENDR
+    ret
+__endasm;
+}
+
+uint8_t vdp_read_byte() __naked __z88dk_callee
+{
+__asm
+    ld c, DATA_PORT
+    in a, (c)
+    ld l, a        
+    ld h, 0        
+    ret
+__endasm;
+}
+
+void vdp_write_byte(const unsigned char *src) __naked __z88dk_fastcall
+{
+__asm
+    ld   c, DATA_PORT
+    ld   a, l 
+    out  (c), a
+    ret
+__endasm;
+}
+
+void vdp_write_bytes(const unsigned char *src, unsigned int len) __naked __z88dk_callee
+{
+__asm
+    pop  bc 
+    pop  de
+    pop  hl
+    push bc
+    ld   c, DATA_PORT
+
+vwb_loop:            
+    ld   a, (hl)         
+    out  (c), a          
+    inc  hl              
+    dec  de              
+    ld   a, d
+    or   e
+    jr   nz, vwb_loop
+    ret 
+__endasm;
+}
+
+void vdp_write_bytes_otir(const uint8_t *src, uint16_t len) __naked __z88dk_callee
+{
+__asm
+pop  bc              ; ret
+    pop  de          ; len  (DE)
+    pop  hl          ; src  (HL)
+    push bc
+    ld   c, DATA_PORT
+
+vwbf_loop256:
+    ld   a, d
+    or   e           ; len == 0?
+    ret  z
+    ld   b, 0        ; 256
+    ld   a, d
+    or   a
+    jr   z, vwbf_last
+    otir             ; 256-byte burst
+    dec  d
+    jp   vwbf_loop256
+
+vwbf_last:
+    ld   b, e        ; remainder <256
+    otir
+    ret
+__endasm;
+}
+
+void vdp_blast_line(const unsigned char* src) __naked __z88dk_fastcall
+{
+__asm
+    ld c, DATA_PORT           
+    ld b, 32             
+vbl_loop:
+    ld a, (hl)           
+    out (c), a           
+    inc hl               
+    dec b                
+    jp nz, vbl_loop
+    ret
+__endasm;
+}
+
+void vdp_blast_tilemap(const unsigned char* src) __naked __z88dk_fastcall
+{
+__asm
+    ld c, DATA_PORT           
+    ld de, 768           
+vbt_loop:
+    ld a, (hl)           
+    out (c), a           
+    inc hl               
+    dec de               
+    ld a, d
+    or e                 
+    jp nz, vbt_loop
+    ret
+__endasm;
+}
+
+void suspend_interrupts(void) __naked __z88dk_callee
+{
+__asm
+    di
+    ret
+__endasm;
+}
+
+void resume_interrupts(void) __naked __z88dk_callee
+{
+__asm
+    ei
+    ret
+__endasm;
+}
+
+void do_nop(void) __naked __z88dk_callee
+{
+__asm
+    nop
+    ret
+__endasm;
 }

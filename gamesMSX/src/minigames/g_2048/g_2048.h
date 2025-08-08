@@ -1,9 +1,10 @@
 #ifndef G2048_H
 #define G2048_H
+#include <string.h>   
 #include <conio.h>
-#include "alphabet_bitmap.h"
-#include "g2048_bitmap.h"
-#include "g2048_sprites.h"
+#include "g_2048_bitmap.h"
+#include "g_2048_sprites.h"
+#include "../alphabet/alphabet.h"
 #include "../buffers.h"
 #include "../../utils/utils_fps.h"
 #include "../../utils/utils_random.h"

@@ -4,11 +4,11 @@
 #include <msx.h>
 #include <stdint.h>
 #include "../buffers.h"
+#include "../alphabet/alphabet.h"
 #include "../../utils/utils_fps.h"
 #include "../../utils/utils_random.h"
 #include "../../utils/utils_msx.h"
 
-// Posa la pantalla en Screen 3 i dibuixa un quadrat al centre
-void main_gSnake(void) __banked;
+void main_gsnake(void) __banked;
           
-#endif  // BOX_H
+#endif 
