@@ -39,7 +39,7 @@ void main(void) {
 
         } else if (selected_bank == 3) {
 
-            bank3_content();
+            main_g_flappy();
             selected_menu_option = 2;
             selected_bank = 1;
 

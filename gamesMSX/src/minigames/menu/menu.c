@@ -155,7 +155,7 @@ void init_menu(void) __banked {
     vdp_set_address(MODE_2_TILEMAP_BASE);
     vdp_blast_tilemap(menu_bitmap_tilemap);
     write_text_to_vram("1.2048",    C_POS_1_X + (C_POS_1_Y << 5));
-    write_text_to_vram("2.",        C_POS_2_X + (C_POS_2_Y << 5));
+    write_text_to_vram("2.Flappy",  C_POS_2_X + (C_POS_2_Y << 5));
     write_text_to_vram("3.Snake",   C_POS_3_X + (C_POS_3_Y << 5));
     write_text_to_vram("4.",        C_POS_4_X + (C_POS_4_Y << 5));
     

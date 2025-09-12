@@ -3,6 +3,8 @@
 # ./make-msx.sh compile scroll [phillips]
 # ./make-msx.sh run scroll [phillips]
 
+reset
+
 export ZCCCFG="$(pwd)/../z88dk-msx/lib/config"
 export PATH="$(pwd)/../z88dk-msx/bin:$PATH"
 
@@ -14,8 +16,8 @@ machine_param="$3"
 # Comprovació d'ús
 if [ "$#" -lt 2 ] || [ "$#" -gt 3 ]; then
     echo "Usage:    $0 {compile|run} {minigames} [phillips]"
-    echo "Examples: $0 compile scroll"
-    echo "          $0 run scroll phillips"
+    echo "Examples: $0 compile minigames"
+    echo "          $0 run minigames phillips"
     exit 1
 fi
 
