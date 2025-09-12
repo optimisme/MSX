@@ -74,7 +74,8 @@
         "g_2048.h": "c",
         "g_2048_sprites.h": "c",
         "g_2048_bitmap.h": "c",
-        "alphabet.h": "c"
+        "alphabet.h": "c",
+        "stdint.h": "c"
     },
     "C_Cpp.errorSquiggles": "disabled",
     "cmake.sourceDirectory": "/Users/albertpalaciosjimenez/Desktop/msx/z88dk-msx/ext/Unity"

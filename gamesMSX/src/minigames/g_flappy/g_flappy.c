@@ -1,87 +1,200 @@
-#pragma bank 3
-
-// Flappy mínim (MSX1 SCREEN 2, sprites 8x8)
-#include <conio.h>                // kbhit(), getch()
-#include <video/tms99x8.h>        // vdp_vpoke, taules VDP
-#include "../../utils/utils_msx.h" // msx_set_mode(2)
 #include "g_flappy.h"
+#include <stdbool.h>
+#include <string.h>
+#include <stdio.h>
 
-// Taules SCREEN 2 (TMS9918A)
-#define NAME_TABLE_BASE  0x1800   // Tilemap (32x24 = 768 bytes)
-#define SPR_PAT_BASE     0x3800   // Sprite Pattern Table
-#define SPR_ATTR_BASE    0x1B00   // Sprite Attribute Table
+#define GRID_W 32
+#define GRID_H 24
 
-// Slots i colors
-#define SP_BIRD          0
-#define COL_YELLOW       14       // groc (MSX1)
+// Tiles
+#define TILE_BLANK   0x00
+#define TILE_BORDER  0x03
 
-// Patró 8x8 (ocell)
-static const unsigned char BIRD8[8] = {
-    0x18, 0x3C, 0x7E, 0xDB, 0xFF, 0x7E, 0x3C, 0x18
+// Àrea jugable com a Snake
+#define BOARD_X 2
+#define BOARD_Y 2
+#define BOARD_W 28
+#define BOARD_H 20
+
+// Sprite ocell
+#define SP_BIRD 0
+#define COL_BIRD COLOR_LIGHT_YELLOW   // o COLOR_DARK_YELLOW si el prefereixes
+
+// --- Prototips ---
+static void init_tiles(void);
+static void set_tile(uint8_t x, uint8_t y, uint8_t t);
+static void init_game(void);
+static void restart_game(void);
+static void draw_ui_texts(void);
+static void draw_hud(void);
+static void input_step(void);
+static void update_step(void);
+static void render_step(void);
+
+// --- Patrons (8x8) ---
+static const uint8_t pat_blank[8] = {0};
+static const uint8_t pat_solid[8] = {0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
+static const uint8_t pat_bird[8]  = {0x18,0x3C,0x7E,0xDB,0xFF,0x7E,0x3C,0x18};
+
+// --- Colors per línia (SCREEN2)
+static const uint8_t col_white[8] = {
+    COLOR_WHITE,COLOR_WHITE,COLOR_WHITE,COLOR_WHITE,
+    COLOR_WHITE,COLOR_WHITE,COLOR_WHITE,COLOR_WHITE
 };
 
-// Helpers
-static void clear_name_table(void) {
-    unsigned int addr = NAME_TABLE_BASE;
-    for (unsigned int i = 0; i < 32u * 24u; ++i) vdp_vpoke(addr + i, 0x00);
-}
-static void sprite_upload_pattern(unsigned char patIndex, const unsigned char *pat8) {
-    unsigned int base = SPR_PAT_BASE + ((unsigned int)patIndex << 3);
-    for (unsigned char i = 0; i < 8; ++i) vdp_vpoke(base + i, pat8[i]);
-}
-static void sprite_set(unsigned char slot, unsigned char x, unsigned char y,
-                       unsigned char patIndex, unsigned char color) {
-    unsigned int a = SPR_ATTR_BASE + ((unsigned int)slot << 2);
-    vdp_vpoke(a + 0, y);
-    vdp_vpoke(a + 1, x);
-    vdp_vpoke(a + 2, patIndex);
-    vdp_vpoke(a + 3, color);
-}
-static void sprite_endlist(unsigned char nextSlot) {
-    unsigned int a = SPR_ATTR_BASE + ((unsigned int)nextSlot << 2);
-    vdp_vpoke(a + 0, 0xD0);   // Y=0xD0 → end-of-list
+// --- Estat ---
+static int16_t bird_x, bird_y, bird_vy;
+static uint16_t pipes_count;
+static bool game_over;
+static bool exit_now;
+
+// ================== Helpers ==================
+static void set_tile(uint8_t x, uint8_t y, uint8_t t) {
+    msx_vpoke(MODE_2_TILEMAP_BASE + (uint16_t)y * GRID_W + x, t);
 }
 
-void main_g_flappy(void) {
-    // MODE
-    msx_set_mode(2);          // SCREEN 2
+static void init_tiles(void) {
+    // Idèntic a Snake: definim tile BLANK i BORDER, però BORDER en blanc (ple)
+    for (uint8_t bank = 0; bank < 3; ++bank) {
+        vdp_set_tile(bank, TILE_BLANK,  pat_blank, col_white);
+        vdp_set_tile(bank, TILE_BORDER, pat_solid, col_white);
+    }
+}
 
-    // Neteja bàsica i estat inicial sprites
-    clear_name_table();
-    sprite_endlist(1);        // llista d'sprites acaba després del slot 0
+// ================== UI ==================
+static void draw_ui_texts(void) {
+    write_text_to_vram("(E)xit game", 23 * 32 + 1);
+    write_text_to_vram("(R)estart",   23 * 32 + 22);
+}
 
-    // Carrega el patró de l’ocell al patró 0
-    sprite_upload_pattern(0, BIRD8);
+static void draw_hud(void) {
+    char buf[32];
+    sprintf(buf, "Pipes: %u", (unsigned)pipes_count);
+    write_text_to_vram(buf, 0 * 32 + 1);
+}
 
-    // Estat del joc
-    int x = 48;
-    int y = 80;
-    int vy = 0;
-    const int GRAV = 1;
-    const int FLAP = -4;
+// ================== Game setup ==================
+static void init_game(void) {
+    // — seqüència igual que Snake —
+    vdp_set_screen_mode(2);
+    vdp_set_address(MODE_2_TILEMAP_BASE);
+    vdp_blast_tilemap(vdp_tilemap_buff);
+    init_tiles();
 
-    // Bucle principal
-    for (;;) {
-        // Input: ESPAI salta, ESC surt
-        if (kbhit()) {
-            unsigned char c = getch();
-            if (c == ' ')       vy = FLAP;
-            else if (c == 27)   break;    // ESC
-        }
+    // 1) neteja buffers locals
+    memset(vdp_tilemap_buff, TILE_BLANK, GRID_W * GRID_H);       // tilemap a 0
+    memset(vdp_global_buff, (COLOR_WHITE<<4)|COLOR_BLACK, VDP_GLOBAL_SIZE);
 
-        // Física senzilla
-        vy += GRAV; if (vy > 4) vy = 4;
-        y += vy;
-        if (y < 16)  { y = 16;  vy = 0; }
-        if (y > 176) { y = 176; vy = 0; }
-
-        // Dibuix
-        sprite_set(SP_BIRD, (unsigned char)x, (unsigned char)y, 0, COL_YELLOW);
-
-        // Delay curt (estabilitzar FPS)
-        for (volatile unsigned int d = 0; d < 2000; ++d) { }
+    // 2) ajusta COLORS del tile BORDER a blanc/ blanc (ple)
+    for (uint8_t bank = 0; bank < 3; ++bank) {
+        uint16_t bidx = bank * 256 + TILE_BORDER;
+        for (uint8_t r = 0; r < 8; ++r)
+            vdp_global_buff[bidx*8 + r] = (COLOR_WHITE<<4) | COLOR_WHITE;
     }
 
-    // Sortir: amaga l’sprite
-    sprite_set(SP_BIRD, 0, 0xD0, 0, 0);
+    // 3) puja buffers a VRAM
+    vdp_set_address(MODE_2_TILEMAP_BASE);
+    vdp_blast_tilemap(vdp_tilemap_buff);
+    vdp_set_address(MODE_2_VRAM_COLOR_BASE);
+    vdp_write_bytes(vdp_global_buff, VDP_GLOBAL_SIZE);
+
+    // 4) alfabet per text (mateix que Snake/2048)
+    load_alphabet_tileset();
+    load_alphabet_colors();                                      
+    draw_ui_texts();
+    draw_hud();
+
+    // 5) marc blanc com Snake
+    for (uint8_t x = 1; x < GRID_W-1; ++x) {
+        set_tile(x, 1,        TILE_BORDER);
+        set_tile(x, GRID_H-2, TILE_BORDER);
+    }
+    for (uint8_t y = 1; y < GRID_H-1; ++y) {
+        set_tile(1,        y, TILE_BORDER);
+        set_tile(GRID_W-2, y, TILE_BORDER);
+    }
+
+    // 6) amaga sprites i carrega ocell
+    {
+        uint8_t empty[8] = {0};
+        for (uint8_t i = 0; i < 16; ++i)
+            vdp_update_sprite(i, empty, COLOR_BLACK, 0, 0);      // mateix call que Snake
+    }
+
+    restart_game();
+}
+
+static void restart_game(void) {
+    exit_now    = false;
+    game_over   = false;
+    pipes_count = 0;
+
+    // buida zona jugable (per si venim de GAME OVER)
+    for (uint8_t y = BOARD_Y; y < BOARD_Y + BOARD_H; ++y)
+        for (uint8_t x = BOARD_X; x < BOARD_X + BOARD_W; ++x)
+            set_tile(x, y, TILE_BLANK);
+
+    bird_x  = 64;
+    bird_y  = 96;
+    bird_vy = 0;
+
+    draw_hud();
+}
+
+// ================== Loop ==================
+static void input_step(void) {
+    // Tecles com a Snake: E/ESC surt, R reinicia
+    if (kbhit()) {
+        uint8_t c = cgetc();
+        if (c == 'e' || c == 'E' || c == 0x1B) { exit_now = true; game_over = true; return; }
+        if (c == 'r' || c == 'R') { restart_game(); }
+        if (c == ' ') { bird_vy = -4; } // flap
+    }
+}
+
+static void update_step(void) {
+    const int8_t GRAV = 1;
+    if (bird_vy < 4) bird_vy += GRAV;
+    bird_y += bird_vy;
+
+    // Adjust boundaries to match your actual play area
+    if (bird_y <= 24 || bird_y >= 160) game_over = true;  // Less restrictive
+}
+
+static void render_step(void) {
+    // Dibuixa l’ocell: patró 8x8 + color groc (mateix API que Snake)
+    vdp_update_sprite(SP_BIRD, pat_bird, COL_BIRD, (uint8_t)bird_x, (uint8_t)bird_y);
+}
+
+// ================== Main ==================
+void main_g_flappy(void) {
+    init_fps();
+    init_game();
+
+    for (;;) {
+        uint8_t frame = 0;
+        const uint8_t SPEED = 2;
+        game_over = false;
+        exit_now  = false;
+
+        while (!game_over) {
+            if (wait_fps()) continue;
+            input_step();
+            if (exit_now) return;                // sortir immediat
+            if (++frame >= SPEED) { frame = 0; update_step(); render_step(); }
+        }
+
+        if (exit_now) return;
+
+        write_text_to_vram("GAME OVER", 12 * 32 + 11);
+
+        // espera R o E com a Snake
+        for (;;) {
+            if (kbhit()) {
+                uint8_t c = cgetc();
+                if (c == 'e' || c == 'E' || c == 0x1B) return;
+                if (c == 'r' || c == 'R') { restart_game(); break; }
+            }
+        }
+    }
 }

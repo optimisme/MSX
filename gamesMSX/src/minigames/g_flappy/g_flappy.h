@@ -1,10 +1,14 @@
 #ifndef G_FLAPPYBIRD_H
 #define G_FLAPPYBIRD_H
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <conio.h>           // kbhit(), getch()
-#include <video/tms99x8.h>
+
+#include <msx.h>
+#include <stdint.h>
+#include "../buffers.h"
+#include "../alphabet/alphabet.h"
+#include "../../utils/utils_fps.h"
+#include "../../utils/utils_random.h"
+#include "../../utils/utils_msx.h"
 
 // Punt d'entrada del minijoc
 void g_flappybird_run(void);
