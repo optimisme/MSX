@@ -26,5 +26,6 @@ extern FPS_t fps_buff[1];
 
 void init_fps(void);
 uint8_t wait_fps(void);
+void wait_vblank(void);
 
 #endif

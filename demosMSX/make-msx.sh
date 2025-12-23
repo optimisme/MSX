@@ -9,11 +9,14 @@ export PATH="$(pwd)/../z88dk-msx/bin:$PATH"
 # Paràmetres
 action="$1"
 target="$2"
+# normalize dashes to underscores for convenience
+target="${target//-/_}"
 machine_param="$3"
 
 # Comprovació d'ús
 if [ "$#" -lt 2 ] || [ "$#" -gt 3 ]; then
-    echo "Usage:    $0 {compile|run} {background|bank_mapper|bitmap|bitmap_buffer|mode3|mode3_subpixel|mode3_subpixel_b|hello|scroll|smooth_scroll_x|smooth_scroll_y} [phillips]"
+    echo "Usage:    $0 {compile|run} {background|bank_mapper|bitmap|bitmap_buffer|mode3|mode3_subpixel|mode3_subpixel_b|hello|scroll|smooth_scroll_x|smooth_scroll_y|smooth_scroll_platformer} [phillips]"
+    echo "Aliases:  dashes are accepted, e.g. smooth-scroll-x"
     echo "Examples: $0 compile scroll"
     echo "          $0 run scroll phillips"
     exit 1
@@ -53,7 +56,7 @@ compile() {
                 "src/$target/main.c" \
                 -o "$out_dir/app"
             ;;
-        background|bitmap|bitmap_buffer|mode3|mode3_subpixel|mode3_subpixel_b|scroll|smooth_scroll_x|smooth_scroll_x2|smooth_scroll_y)
+        background|bitmap|bitmap_buffer|mode3|mode3_subpixel|mode3_subpixel_b|scroll|smooth_scroll_x|smooth_scroll_x2|smooth_scroll_y|smooth_scroll_platformer)
             zcc +msx -create-app -subtype=rom -lmsxbios \
                      -O3 --opt-code-speed \
                 src/$target/*.c \

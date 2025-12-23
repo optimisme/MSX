@@ -18,3 +18,8 @@ uint8_t wait_fps(void) {
     fps_frame_count++;
     return 0;
 }
+
+void wait_vblank(void) {
+    uint16_t current = JIFFY;
+    while (JIFFY == current) { }
+}
