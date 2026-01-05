@@ -1,0 +1,4 @@
+[submodule "z88dk-msx"]
+	path = z88dk-msx
+	url = https://github.com/z88dk/z88dk.git
+	ignore = all
