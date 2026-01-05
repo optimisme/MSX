@@ -27,6 +27,7 @@ Temporary Items
 bin/*
 
 # Compiler
+z88dk-msx/ext/*
 z88dk-msx/*
 *.rom
 *.bin
