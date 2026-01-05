@@ -1,6 +1,7 @@
 #pragma bank 3
 
 #include "g_mines.h"
+#include "loading.h"
 #include <stdbool.h>
 #include <string.h>
 #include <stdio.h>
@@ -17,6 +18,8 @@
 #define TILE_COVER_A 0x01
 #define TILE_COVER_B 0x02
 #define TILE_BORDER  0x04
+#define TILE_FLAG    0x05
+#define TILE_MINE    0x06
 
 #define CURSOR_SPRITE 0
 #define CURSOR_PATTERN 0
@@ -46,7 +49,7 @@ static void input_step(void);
 static void update_step(void);
 static void draw_hud(void);
 static void draw_ui_texts(void);
-static void place_mines(uint8_t safe_x, uint8_t safe_y);
+static void place_mines(void);
 static void compute_counts(void);
 static void reveal_cell(uint8_t x, uint8_t y);
 static void reveal_all_mines(void);
@@ -54,21 +57,67 @@ static void update_cursor_sprite(void);
 static void hide_sprites(void);
 static bool check_win(void);
 static void set_cover_tile(uint8_t x, uint8_t y);
-static void set_mine_color(void);
-static void set_flag_color(void);
+static void run_loading_sequence(void);
+static void ensure_safe_first(uint8_t x, uint8_t y);
 
 static const uint8_t pat_blank[8] = {0};
 static const uint8_t pat_border[8]  = {0xFF,0x81,0x81,0x81,0x81,0x81,0x81,0xFF};
 static const uint8_t pat_cover_a[8] = {0xAA,0x55,0xAA,0x55,0xAA,0x55,0xAA,0x55};
 static const uint8_t pat_cover_b[8] = {0x55,0xAA,0x55,0xAA,0x55,0xAA,0x55,0xAA};
+static const uint8_t pat_flag[8]    = {0x10,0x30,0x7C,0x30,0x30,0x30,0x30,0x00};
+static const uint8_t pat_mine[8]    = {0x10,0x54,0x38,0xFE,0x38,0x54,0x10,0x00};
 static const uint8_t pat_cursor[8]= {0xFF,0xFF,0xC3,0xC3,0xC3,0xC3,0xFF,0xFF};
 
-static const uint8_t col_blank[8] = {COLOR_WHITE, COLOR_WHITE, COLOR_WHITE, COLOR_WHITE,
-                                     COLOR_WHITE, COLOR_WHITE, COLOR_WHITE, COLOR_WHITE};
-static const uint8_t col_cover[8] = {COLOR_GRAY, COLOR_GRAY, COLOR_GRAY, COLOR_GRAY,
-                                     COLOR_GRAY, COLOR_GRAY, COLOR_GRAY, COLOR_GRAY};
-static const uint8_t col_border[8] = {COLOR_GRAY, COLOR_GRAY, COLOR_GRAY, COLOR_GRAY,
-                                      COLOR_GRAY, COLOR_GRAY, COLOR_GRAY, COLOR_GRAY};
+static const uint8_t col_blank[8] = {
+    (COLOR_BLACK << 4) | COLOR_BLACK,
+    (COLOR_BLACK << 4) | COLOR_BLACK,
+    (COLOR_BLACK << 4) | COLOR_BLACK,
+    (COLOR_BLACK << 4) | COLOR_BLACK,
+    (COLOR_BLACK << 4) | COLOR_BLACK,
+    (COLOR_BLACK << 4) | COLOR_BLACK,
+    (COLOR_BLACK << 4) | COLOR_BLACK,
+    (COLOR_BLACK << 4) | COLOR_BLACK
+};
+static const uint8_t col_cover[8] = {
+    (COLOR_GRAY << 4) | COLOR_BLACK,
+    (COLOR_GRAY << 4) | COLOR_BLACK,
+    (COLOR_GRAY << 4) | COLOR_BLACK,
+    (COLOR_GRAY << 4) | COLOR_BLACK,
+    (COLOR_GRAY << 4) | COLOR_BLACK,
+    (COLOR_GRAY << 4) | COLOR_BLACK,
+    (COLOR_GRAY << 4) | COLOR_BLACK,
+    (COLOR_GRAY << 4) | COLOR_BLACK
+};
+static const uint8_t col_border[8] = {
+    (COLOR_GRAY << 4) | COLOR_BLACK,
+    (COLOR_GRAY << 4) | COLOR_BLACK,
+    (COLOR_GRAY << 4) | COLOR_BLACK,
+    (COLOR_GRAY << 4) | COLOR_BLACK,
+    (COLOR_GRAY << 4) | COLOR_BLACK,
+    (COLOR_GRAY << 4) | COLOR_BLACK,
+    (COLOR_GRAY << 4) | COLOR_BLACK,
+    (COLOR_GRAY << 4) | COLOR_BLACK
+};
+static const uint8_t col_flag[8]  = {
+    (COLOR_CYAN << 4) | COLOR_BLACK,
+    (COLOR_CYAN << 4) | COLOR_BLACK,
+    (COLOR_CYAN << 4) | COLOR_BLACK,
+    (COLOR_CYAN << 4) | COLOR_BLACK,
+    (COLOR_CYAN << 4) | COLOR_BLACK,
+    (COLOR_CYAN << 4) | COLOR_BLACK,
+    (COLOR_CYAN << 4) | COLOR_BLACK,
+    (COLOR_CYAN << 4) | COLOR_BLACK
+};
+static const uint8_t col_mine[8]  = {
+    (COLOR_LIGHT_RED << 4) | COLOR_BLACK,
+    (COLOR_LIGHT_RED << 4) | COLOR_BLACK,
+    (COLOR_LIGHT_RED << 4) | COLOR_BLACK,
+    (COLOR_LIGHT_RED << 4) | COLOR_BLACK,
+    (COLOR_LIGHT_RED << 4) | COLOR_BLACK,
+    (COLOR_LIGHT_RED << 4) | COLOR_BLACK,
+    (COLOR_LIGHT_RED << 4) | COLOR_BLACK,
+    (COLOR_LIGHT_RED << 4) | COLOR_BLACK
+};
 static void set_tile(uint8_t x, uint8_t y, uint8_t t) {
     msx_vpoke(MODE_2_TILEMAP_BASE + (uint16_t)y * GRID_W + x, t);
 }
@@ -85,6 +134,8 @@ static void init_tiles(void) {
         vdp_set_tile(bank, TILE_COVER_A, pat_cover_a, col_cover);
         vdp_set_tile(bank, TILE_COVER_B, pat_cover_b, col_cover);
         vdp_set_tile(bank, TILE_BORDER,  pat_border,  col_border);
+        vdp_set_tile(bank, TILE_FLAG,    pat_flag,    col_flag);
+        vdp_set_tile(bank, TILE_MINE,    pat_mine,    col_mine);
     }
 }
 
@@ -102,35 +153,8 @@ static void draw_hud(void) {
     write_text_to_vram(buf, 0 * 32 + 1);
 }
 
-static void set_char_color(char c, uint8_t fg, uint8_t bg) {
-    uint8_t idx = CHAR_TO_INDEX(c);
-    if (idx == INVALID_CHAR) return;
-    uint8_t tile = (uint8_t)(ALPHABET_BASE + idx);
-    uint8_t attr = (uint8_t)((fg << 4) | (bg & 0x0F));
-
-    for (uint8_t bank = 0; bank < 3; ++bank) {
-        uint16_t base = (uint16_t)(bank * 256 + tile) * 8;
-        for (uint8_t r = 0; r < 8; ++r) {
-            vdp_global_buff[base + r] = attr;
-        }
-        vdp_set_tile_color(bank, tile, fg, bg);
-    }
-}
-
-static void set_mine_color(void) {
-    set_char_color('*', COLOR_LIGHT_RED, COLOR_BLACK);
-}
-
-static void set_flag_color(void) {
-    set_char_color('F', COLOR_CYAN, COLOR_BLACK);
-}
-
 static void init_game(void) {
     vdp_set_screen_mode(2);
-    vdp_set_address(MODE_2_TILEMAP_BASE);
-    vdp_blast_tilemap(vdp_tilemap_buff);
-
-    init_tiles();
 
     memset(vdp_tilemap_buff, TILE_BLANK, GRID_W * GRID_H);
     memset(vdp_global_buff, (COLOR_WHITE << 4) | COLOR_BLACK, VDP_GLOBAL_SIZE);
@@ -140,16 +164,14 @@ static void init_game(void) {
     vdp_set_address(MODE_2_VRAM_COLOR_BASE);
     vdp_write_bytes(vdp_global_buff, VDP_GLOBAL_SIZE);
 
+    init_tiles();
+
     load_alphabet_tileset();
     load_alphabet_colors();
-    set_mine_color();
-    set_flag_color();
     draw_ui_texts();
 
     for (uint8_t i = 0; i < 16; ++i) vdp_update_sprite(i, 0, COLOR_BLACK, 0, 208);
     vdp_set_sprite(CURSOR_SPRITE, pat_cursor, CURSOR_PATTERN);
-
-    restart_game();
 }
 
 static void restart_game(void) {
@@ -166,6 +188,10 @@ static void restart_game(void) {
     memset(revealed, 0, sizeof(revealed));
     memset(flagged, 0, sizeof(flagged));
     memset(counts, 0, sizeof(counts));
+
+    run_loading_sequence();
+
+    init_game();
 
     for (uint8_t y = 0; y < BOARD_SIZE; ++y) {
         for (uint8_t x = 0; x < BOARD_SIZE; ++x) {
@@ -187,17 +213,15 @@ static void restart_game(void) {
     draw_hud();
 }
 
-static void place_mines(uint8_t safe_x, uint8_t safe_y) {
+static void place_mines(void) {
     uint8_t placed = 0;
     while (placed < MINE_COUNT) {
         uint8_t x = (uint8_t)(random_8() % BOARD_SIZE);
         uint8_t y = (uint8_t)(random_8() % BOARD_SIZE);
-        if (x == safe_x && y == safe_y) continue;
         if (mines[y][x]) continue;
         mines[y][x] = 1;
         ++placed;
     }
-    compute_counts();
 }
 
 static void compute_counts(void) {
@@ -220,11 +244,10 @@ static void compute_counts(void) {
 }
 
 static void reveal_all_mines(void) {
-    set_mine_color();
     for (uint8_t y = 0; y < BOARD_SIZE; ++y) {
         for (uint8_t x = 0; x < BOARD_SIZE; ++x) {
             if (mines[y][x]) {
-                set_char_tile((uint8_t)(BOARD_X + x), (uint8_t)(BOARD_Y + y), '*');
+                set_tile((uint8_t)(BOARD_X + x), (uint8_t)(BOARD_Y + y), TILE_MINE);
             }
         }
     }
@@ -234,13 +257,12 @@ static void reveal_cell(uint8_t x, uint8_t y) {
     if (revealed[y][x] || flagged[y][x]) return;
 
     if (first_reveal) {
-        place_mines(x, y);
+        ensure_safe_first(x, y);
         first_reveal = false;
     }
 
     if (mines[y][x]) {
-        set_mine_color();
-        set_char_tile((uint8_t)(BOARD_X + x), (uint8_t)(BOARD_Y + y), '*');
+        set_tile((uint8_t)(BOARD_X + x), (uint8_t)(BOARD_Y + y), TILE_MINE);
         reveal_all_mines();
         game_over = true;
         return;
@@ -300,6 +322,54 @@ static void reveal_cell(uint8_t x, uint8_t y) {
     }
 }
 
+static void run_loading_sequence(void) {
+    uint8_t total_frames = fps_is_pal ? 50 : 60;
+    bool placement_done = false;
+
+    vdp_set_screen_mode(2);
+    loading_init(10, 11);
+
+    for (uint8_t frame = 0; frame < total_frames; ) {
+        if (wait_fps()) continue;
+        uint8_t percent = (uint8_t)(((uint16_t)(frame + 1) * 100) / total_frames);
+        loading_draw_progress(10, 22, 12, percent);
+        if (!placement_done && frame >= (total_frames / 3)) {
+            place_mines();
+            compute_counts();
+            placement_done = true;
+        }
+        ++frame;
+    }
+
+    if (!placement_done) {
+        place_mines();
+        compute_counts();
+    }
+}
+
+static void ensure_safe_first(uint8_t x, uint8_t y) {
+    if (!mines[y][x]) return;
+
+    mines[y][x] = 0;
+    for (uint16_t tries = 0; tries < BOARD_SIZE * BOARD_SIZE; ++tries) {
+        uint8_t nx = (uint8_t)(random_8() % BOARD_SIZE);
+        uint8_t ny = (uint8_t)(random_8() % BOARD_SIZE);
+        if ((nx == x && ny == y) || mines[ny][nx]) continue;
+        mines[ny][nx] = 1;
+        compute_counts();
+        return;
+    }
+
+    for (uint8_t ny = 0; ny < BOARD_SIZE; ++ny) {
+        for (uint8_t nx = 0; nx < BOARD_SIZE; ++nx) {
+            if ((nx == x && ny == y) || mines[ny][nx]) continue;
+            mines[ny][nx] = 1;
+            compute_counts();
+            return;
+        }
+    }
+}
+
 static bool check_win(void) {
     uint8_t safe_cells = (uint8_t)(BOARD_SIZE * BOARD_SIZE - MINE_COUNT);
     return revealed_count >= safe_cells;
@@ -355,8 +425,7 @@ static void input_step(void) {
                 } else {
                     flagged[cursor_y][cursor_x] = 1;
                     ++flags_count;
-                    set_flag_color();
-                    set_char_tile((uint8_t)(BOARD_X + cursor_x), (uint8_t)(BOARD_Y + cursor_y), 'F');
+                    set_tile((uint8_t)(BOARD_X + cursor_x), (uint8_t)(BOARD_Y + cursor_y), TILE_FLAG);
                 }
                 draw_hud();
             }
@@ -373,7 +442,7 @@ static void update_step(void) {
 
 void main_g_mines(void) __banked {
     init_fps();
-    init_game();
+    restart_game();
 
     for (;;) {
         game_over = false;
