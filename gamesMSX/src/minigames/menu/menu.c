@@ -54,7 +54,7 @@ void main_menu(uint8_t selected_menu_option, uint8_t *out) __banked {
         if (kbhit()) {   
             uint8_t leave = 0;
             b_key = cgetc();
-            if (b_key == ' ' || b_key == '\n') {
+            if (b_key == ' ' || b_key == '\n' || b_key == '\r') {
                 leave = b_option + 1;
             } else if (b_key == '1') {
                 leave = 2;
@@ -157,7 +157,7 @@ void init_menu(void) __banked {
     write_text_to_vram("1.2048",    C_POS_1_X + (C_POS_1_Y << 5));
     write_text_to_vram("2.Flappy",  C_POS_2_X + (C_POS_2_Y << 5));
     write_text_to_vram("3.Snake",   C_POS_3_X + (C_POS_3_Y << 5));
-    write_text_to_vram("4.",        C_POS_4_X + (C_POS_4_Y << 5));
+    write_text_to_vram("4.Pong",    C_POS_4_X + (C_POS_4_Y << 5));
     
     // Set sprite
     vdp_set_sprite(0, sprite_arrow, 0);

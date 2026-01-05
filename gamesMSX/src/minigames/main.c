@@ -51,7 +51,7 @@ void main(void) {
 
         } else if (selected_bank == 5) {
 
-            bank5_content();
+            main_g_pong();
             selected_menu_option = 4;
             selected_bank = 1;
         }
