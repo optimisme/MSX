@@ -7,6 +7,7 @@
 void main_menu(uint8_t selected_menu_option, uint8_t *out) __banked;
 void main_g_2048() __banked;
 void main_g_flappy() __banked;
+void main_g_mines() __banked;
 void main_g_snake() __banked;
 void main_g_pong() __banked;
 
