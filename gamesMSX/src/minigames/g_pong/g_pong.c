@@ -51,8 +51,10 @@
 #define PADDLE_STEP_MAX    4
 
 #define BALL_SPEED_START_FP 205
-#define BALL_SPEED_MAX_FP   1024
-#define BALL_SPEED_INC_FP   4
+#define BALL_SPEED_MAX_FP   640
+#define BALL_SPEED_INC_FP   5
+#define BALL_SPEED_INC_FAST_FP 10
+#define BALL_SPEED_INC_FASTER_FP 15
 
 static int32_t ball_cx, ball_cy;
 static int8_t ball_vx, ball_vy;
@@ -74,6 +76,7 @@ static void draw_hud(void);
 static void draw_ui_texts(void);
 static void move_paddle(int8_t delta);
 static void update_paddle_sprites(void);
+static void hide_sprites(void);
 
 static const uint8_t pat_blank[8] = {0};
 static const uint8_t pat_solid[8] = {0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
@@ -103,8 +106,17 @@ static void draw_ui_texts(void) {
 
 static void draw_hud(void) {
     char buf[32];
+    uint8_t speed_int = (uint8_t)(ball_speed >> 8);
+    uint8_t speed_frac = (uint8_t)(((uint16_t)(ball_speed & 0xFF) * 100) >> 8);
+
     sprintf(buf, "Hits: %3u", hits);
     write_text_to_vram(buf, 0 * 32 + 1);
+
+    sprintf(buf, "Speed:  %u.%02u", speed_int, speed_frac);
+    uint8_t len = (uint8_t)strlen(buf);
+    uint8_t right_col = (uint8_t)(BOARD_X + BOARD_W);
+    uint8_t start_col = (right_col + 1 >= len) ? (uint8_t)(right_col + 1 - len) : 0;
+    write_text_to_vram(buf, 0 * 32 + start_col);
 }
 
 static void init_game(void) {
@@ -188,6 +200,12 @@ static void update_paddle_sprites(void) {
     }
 }
 
+static void hide_sprites(void) {
+    for (uint8_t i = 0; i < 16; ++i) {
+        vdp_update_sprite(i, 0, COLOR_BLACK, 0, 208);
+    }
+}
+
 static void move_paddle(int8_t delta) {
     int16_t new_x = paddle_x + delta;
     int16_t min_x = BOARD_LEFT_PX;
@@ -261,7 +279,15 @@ static void update_step(void) {
 
                 ++hits;
                 if (ball_speed < BALL_SPEED_MAX_FP) {
-                    ball_speed += BALL_SPEED_INC_FP;
+                    uint8_t inc;
+                    if (hits <= 5) {
+                        inc = BALL_SPEED_INC_FP;
+                    } else if (hits <= 10) {
+                        inc = BALL_SPEED_INC_FAST_FP;
+                    } else {
+                        inc = BALL_SPEED_INC_FASTER_FP;
+                    }
+                    ball_speed += inc;
                     if (ball_speed > BALL_SPEED_MAX_FP) ball_speed = BALL_SPEED_MAX_FP;
                 }
                 if (paddle_step < PADDLE_STEP_MAX) {
@@ -311,18 +337,18 @@ void main_g_pong(void) {
         while (!game_over) {
             if (wait_fps()) continue;
             input_step();
-            if (exit_now) return;
+            if (exit_now) { hide_sprites(); return; }
             update_step();
         }
 
-        if (exit_now) return;
+        if (exit_now) { hide_sprites(); return; }
 
         write_text_to_vram("GAME OVER", 12 * 32 + 11);
 
         for (;;) {
             if (kbhit()) {
                 uint8_t c = cgetc();
-                if (c == 'e' || c == 'E' || c == 0x1B) return;
+                if (c == 'e' || c == 'E' || c == 0x1B) { hide_sprites(); return; }
                 if (c == 'r' || c == 'R') { restart_game(); break; }
             }
         }
