@@ -1,6 +1,7 @@
 #pragma bank 2
 
 #include "g_2048.h"
+#include "../game_utils.h"
 
 #define b_key               (vars_buff[0])
 #define b_stick             (vars_buff[1])
@@ -42,6 +43,7 @@
 
 void main_g_2048() __banked {
     init_fps();
+    game_transition_black();
     init_game();
 
     while (1) {
@@ -51,6 +53,7 @@ void main_g_2048() __banked {
     }
 
     clean_vdp();
+    game_transition_black();
 }
 
 void init_game() __banked {

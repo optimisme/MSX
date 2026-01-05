@@ -1,4 +1,5 @@
 #include "g_pong.h"
+#include "../game_utils.h"
 #include <stdbool.h>
 #include <string.h>
 #include <stdio.h>
@@ -328,6 +329,7 @@ static void update_step(void) {
 
 void main_g_pong(void) {
     init_fps();
+    game_transition_black();
     init_game();
 
     for (;;) {
@@ -337,18 +339,18 @@ void main_g_pong(void) {
         while (!game_over) {
             if (wait_fps()) continue;
             input_step();
-            if (exit_now) { hide_sprites(); return; }
+            if (exit_now) { game_transition_black(); return; }
             update_step();
         }
 
-        if (exit_now) { hide_sprites(); return; }
+        if (exit_now) { game_transition_black(); return; }
 
         write_text_to_vram("GAME OVER", 12 * 32 + 11);
 
         for (;;) {
             if (kbhit()) {
                 uint8_t c = cgetc();
-                if (c == 'e' || c == 'E' || c == 0x1B) { hide_sprites(); return; }
+                if (c == 'e' || c == 'E' || c == 0x1B) { game_transition_black(); return; }
                 if (c == 'r' || c == 'R') { restart_game(); break; }
             }
         }

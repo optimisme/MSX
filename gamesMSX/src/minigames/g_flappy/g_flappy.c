@@ -1,4 +1,5 @@
 #include "g_flappy.h"
+#include "../game_utils.h"
 #include <stdbool.h>
 #include <string.h>
 #include <stdio.h>
@@ -169,6 +170,7 @@ static void render_step(void) {
 // ================== Main ==================
 void main_g_flappy(void) {
     init_fps();
+    game_transition_black();
     init_game();
 
     for (;;) {
@@ -180,11 +182,11 @@ void main_g_flappy(void) {
         while (!game_over) {
             if (wait_fps()) continue;
             input_step();
-            if (exit_now) return;                // sortir immediat
+            if (exit_now) { game_transition_black(); return; } // sortir immediat
             if (++frame >= SPEED) { frame = 0; update_step(); render_step(); }
         }
 
-        if (exit_now) return;
+        if (exit_now) { game_transition_black(); return; }
 
         write_text_to_vram("GAME OVER", 12 * 32 + 11);
 
@@ -192,7 +194,7 @@ void main_g_flappy(void) {
         for (;;) {
             if (kbhit()) {
                 uint8_t c = cgetc();
-                if (c == 'e' || c == 'E' || c == 0x1B) return;
+                if (c == 'e' || c == 'E' || c == 0x1B) { game_transition_black(); return; }
                 if (c == 'r' || c == 'R') { restart_game(); break; }
             }
         }

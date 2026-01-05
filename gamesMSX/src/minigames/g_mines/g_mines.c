@@ -2,6 +2,7 @@
 
 #include "g_mines.h"
 #include "loading.h"
+#include "../game_utils.h"
 #include <stdbool.h>
 #include <string.h>
 #include <stdio.h>
@@ -43,7 +44,6 @@ static uint8_t move_cooldown;
 static void init_tiles(void);
 static void set_tile(uint8_t x, uint8_t y, uint8_t t);
 static void set_char_tile(uint8_t x, uint8_t y, char c);
-static void transition_black(void);
 static void init_game(void);
 static void restart_game(void);
 static void input_step(void);
@@ -60,7 +60,6 @@ static bool check_win(void);
 static void set_cover_tile(uint8_t x, uint8_t y);
 static void run_loading_sequence(void);
 static void ensure_safe_first(uint8_t x, uint8_t y);
-
 static const uint8_t pat_blank[8] = {0};
 static const uint8_t pat_border[8]  = {0xFF,0x81,0x81,0x81,0x81,0x81,0x81,0xFF};
 static const uint8_t pat_cover_a[8] = {0xAA,0x55,0xAA,0x55,0xAA,0x55,0xAA,0x55};
@@ -129,21 +128,6 @@ static void set_char_tile(uint8_t x, uint8_t y, char c) {
     set_tile(x, y, (uint8_t)(ALPHABET_BASE + idx));
 }
 
-static void transition_black(void) {
-    vdp_set_screen_mode(2);
-    vdp_set_reg(7, (COLOR_BLACK << 4) | COLOR_BLACK);
-
-    memset(vdp_tilemap_buff, TILE_BLANK, GRID_W * GRID_H);
-    vdp_set_address(MODE_2_TILEMAP_BASE);
-    vdp_blast_tilemap(vdp_tilemap_buff);
-
-    memset(vdp_global_buff, (COLOR_BLACK << 4) | COLOR_BLACK, VDP_GLOBAL_SIZE);
-    vdp_set_address(MODE_2_VRAM_COLOR_BASE);
-    vdp_write_bytes(vdp_global_buff, VDP_GLOBAL_SIZE);
-
-    hide_sprites();
-}
-
 static void init_tiles(void) {
     for (uint8_t bank = 0; bank < 3; ++bank) {
         vdp_set_tile(bank, TILE_BLANK, pat_blank, col_blank);
@@ -171,7 +155,6 @@ static void draw_hud(void) {
 
 static void init_game(void) {
     vdp_set_screen_mode(2);
-    vdp_set_reg(7, (COLOR_BLACK << 4) | COLOR_BLACK);
 
     memset(vdp_tilemap_buff, TILE_BLANK, GRID_W * GRID_H);
     memset(vdp_global_buff, (COLOR_WHITE << 4) | COLOR_BLACK, VDP_GLOBAL_SIZE);
@@ -206,10 +189,10 @@ static void restart_game(void) {
     memset(flagged, 0, sizeof(flagged));
     memset(counts, 0, sizeof(counts));
 
-    transition_black(); // menu/gameplay -> loading
+    game_transition_black(); // menu/gameplay -> loading
     run_loading_sequence();
 
-    transition_black(); // loading -> gameplay
+    game_transition_black(); // loading -> gameplay
     init_game();
 
     for (uint8_t y = 0; y < BOARD_SIZE; ++y) {
@@ -346,7 +329,6 @@ static void run_loading_sequence(void) {
     bool placement_done = false;
 
     vdp_set_screen_mode(2);
-    vdp_set_reg(7, (COLOR_BLACK << 4) | COLOR_BLACK);
     loading_init(10, 11);
 
     for (uint8_t frame = 0; frame < total_frames; ) {
@@ -471,11 +453,11 @@ void main_g_mines(void) __banked {
         while (!game_over) {
             if (wait_fps()) continue;
             input_step();
-            if (exit_now) { transition_black(); return; }
+            if (exit_now) { game_transition_black(); return; }
             update_step();
         }
 
-    if (exit_now) { transition_black(); return; }
+    if (exit_now) { game_transition_black(); return; }
 
     if (game_won) {
             const char *msg = "YOU WIN";
@@ -492,7 +474,7 @@ void main_g_mines(void) __banked {
         for (;;) {
             if (kbhit()) {
                 uint8_t c = cgetc();
-                if (c == 'e' || c == 'E' || c == 0x1B) { transition_black(); return; }
+                if (c == 'e' || c == 'E' || c == 0x1B) { game_transition_black(); return; }
                 if (c == 'r' || c == 'R') { restart_game(); break; }
             }
         }

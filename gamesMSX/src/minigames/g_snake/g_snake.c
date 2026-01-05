@@ -1,4 +1,5 @@
 #include "g_snake.h"
+#include "../game_utils.h"
 #include <stdbool.h>
 #include <string.h>
 
@@ -326,6 +327,7 @@ static uint8_t snake_part_tile(int8_t dx, int8_t dy, uint8_t step) {
 // --- Main ---
 void main_g_snake(void) {
     init_fps();
+    game_transition_black();
     init_game();
 
     for (;;) {                       // play → game-over → restart loop
@@ -335,12 +337,12 @@ void main_g_snake(void) {
         while (!game_over) {
             if (wait_fps()) continue;
             input();
-            if (exit_now) return;    // exit anytime
+            if (exit_now) { game_transition_black(); return; } // exit anytime
             update();
             render();
         }
 
-        if (exit_now) return;        // exit after loop without showing message
+        if (exit_now) { game_transition_black(); return; } // exit after loop without showing message
 
         write_text_to_vram("GAME OVER", 12 * 32 + 11);
 
@@ -348,7 +350,7 @@ void main_g_snake(void) {
         for (;;) {
             if (kbhit()) {
                 uint8_t c = cgetc();
-                if (c == 'e' || c == 'E' || c == 0x1B) return;
+                if (c == 'e' || c == 'E' || c == 0x1B) { game_transition_black(); return; }
                 if (c == 'r' || c == 'R') { restart_game(); break; } // back to outer loop
             }
         }
