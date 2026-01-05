@@ -51,7 +51,7 @@
 #define PADDLE_STEP_MAX    4
 
 #define BALL_SPEED_START_FP 205
-#define BALL_SPEED_MAX_FP   614
+#define BALL_SPEED_MAX_FP   1024
 #define BALL_SPEED_INC_FP   4
 
 static int32_t ball_cx, ball_cy;
