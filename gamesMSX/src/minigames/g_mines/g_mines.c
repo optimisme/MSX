@@ -140,8 +140,8 @@ static void init_tiles(void) {
 }
 
 static void draw_ui_texts(void) {
-    write_text_to_vram("(F)lag",           22 * 32 + 1);
-    write_text_to_vram("(S)pace",          22 * 32 + 22);
+    write_text_to_vram("(S)pace uncovers",  22 * 32 + 1);
+    write_text_to_vram("(F)lag",           22 * 32 + 22);
     write_text_to_vram("(E)xit game",      23 * 32 + 1);
     write_text_to_vram("(R)estart",        23 * 32 + 22);
 }
@@ -325,7 +325,7 @@ static void reveal_cell(uint8_t x, uint8_t y) {
 }
 
 static void run_loading_sequence(void) {
-    uint8_t total_frames = fps_is_pal ? 50 : 60;
+    uint8_t total_frames = fps_is_pal ? 25 : 30;
     bool placement_done = false;
 
     vdp_set_screen_mode(2);

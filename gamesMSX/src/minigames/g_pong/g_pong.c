@@ -110,7 +110,7 @@ static void draw_hud(void) {
     uint8_t speed_int = (uint8_t)(ball_speed >> 8);
     uint8_t speed_frac = (uint8_t)(((uint16_t)(ball_speed & 0xFF) * 100) >> 8);
 
-    sprintf(buf, "Hits: %3u", hits);
+    sprintf(buf, "Hits: %02u", hits);
     write_text_to_vram(buf, 0 * 32 + 1);
 
     sprintf(buf, "Speed:  %u.%02u", speed_int, speed_frac);
