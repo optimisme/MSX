@@ -13,7 +13,7 @@
 #define ANIM_H 10
 #define ANIM_TILE_COUNT (ANIM_W * ANIM_H)
 
-#define TILE_EMPTY_IDX    ANIM_TILE_COUNT
+#define TILE_EMPTY_IDX    240
 #define TILE_TOTAL        (TILE_EMPTY_IDX + 1)
 
 void init_anim_demo(void);

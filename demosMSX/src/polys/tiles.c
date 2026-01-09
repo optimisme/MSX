@@ -1,4 +1,5 @@
 #include "tiles.h"
+#include "../utils/utils_fps.h"
 #include <stdint.h>
 #include <string.h>
 
@@ -6,8 +7,6 @@
 #define WORLD_W_UNITS (ANIM_W * 4)
 #define WORLD_H_UNITS (ANIM_H * 4)
 #define RECT_COUNT 3
-#define BANK0_TILE_COUNT (ANIM_W * 8)
-#define BANK1_TILE_COUNT (ANIM_W * (ANIM_H - 8))
 #define COLOR_ATTR_WHITE_ON_BLACK ((COLOR_WHITE << 4) | COLOR_BLACK)
 
 typedef struct {
@@ -20,11 +19,9 @@ typedef struct {
 } Rect;
 
 static uint8_t nt_buffer[TILEMAP_SIZE];
-static uint8_t patterns_bank0[BANK0_TILE_COUNT * 8];
-static uint8_t patterns_bank1[BANK1_TILE_COUNT * 8];
-static uint8_t colors_bank0[BANK0_TILE_COUNT * 8];
-static uint8_t colors_bank1[BANK1_TILE_COUNT * 8];
 static uint8_t mask_lr[9][9];
+static uint8_t dirty_tiles[ANIM_H][ANIM_W];
+static uint8_t color_block[MODE_2_COLOR_BLOCK_SIZE];
 
 static Rect rects[RECT_COUNT] = {
     {2, 2, 14, 10, 1, 0},
@@ -55,6 +52,53 @@ static void update_rects(void)
         }
         clamp_rect(rect);
     }
+}
+
+static void clear_dirty(void)
+{
+    memset(dirty_tiles, 0x00, sizeof(dirty_tiles));
+}
+
+static void mark_dirty_for_rect(const Rect *rect)
+{
+    if (rect->w <= 0 || rect->h <= 0) return;
+
+    int16_t x0 = rect->x;
+    int16_t y0 = rect->y;
+    int16_t x1 = (int16_t)(rect->x + rect->w - 1);
+    int16_t y1 = (int16_t)(rect->y + rect->h - 1);
+
+    if (x0 < 0) x0 = 0;
+    if (y0 < 0) y0 = 0;
+    if (x1 >= WORLD_W_UNITS) x1 = (int16_t)(WORLD_W_UNITS - 1);
+    if (y1 >= WORLD_H_UNITS) y1 = (int16_t)(WORLD_H_UNITS - 1);
+
+    int16_t tx0 = (int16_t)(x0 >> 2);
+    int16_t ty0 = (int16_t)(y0 >> 2);
+    int16_t tx1 = (int16_t)(x1 >> 2);
+    int16_t ty1 = (int16_t)(y1 >> 2);
+
+    tx0 = (int16_t)(tx0 - 1);
+    ty0 = (int16_t)(ty0 - 1);
+    tx1 = (int16_t)(tx1 + 1);
+    ty1 = (int16_t)(ty1 + 1);
+
+    if (tx0 < 0) tx0 = 0;
+    if (ty0 < 0) ty0 = 0;
+    if (tx1 >= ANIM_W) tx1 = (int16_t)(ANIM_W - 1);
+    if (ty1 >= ANIM_H) ty1 = (int16_t)(ANIM_H - 1);
+
+    for (int16_t ty = ty0; ty <= ty1; ++ty) {
+        for (int16_t tx = tx0; tx <= tx1; ++tx) {
+            dirty_tiles[ty][tx] = 1;
+        }
+    }
+}
+
+static void mark_dirty_for_rects(const Rect *a, const Rect *b)
+{
+    mark_dirty_for_rect(a);
+    mark_dirty_for_rect(b);
 }
 
 static void init_masks(void)
@@ -133,12 +177,11 @@ void init_anim_demo(void)
         vdp_set_tile_color(bank, TILE_EMPTY_IDX, COLOR_WHITE, COLOR_BLACK);
     }
 
-    memset(colors_bank0, COLOR_ATTR_WHITE_ON_BLACK, sizeof(colors_bank0));
-    memset(colors_bank1, COLOR_ATTR_WHITE_ON_BLACK, sizeof(colors_bank1));
+    memset(color_block, COLOR_ATTR_WHITE_ON_BLACK, sizeof(color_block));
     vdp_set_address((uint16_t)(MODE_2_VRAM_COLOR_BASE + 0u * MODE_2_COLOR_BLOCK_SIZE));
-    vdp_write_bytes_otir(colors_bank0, sizeof(colors_bank0));
-    vdp_set_address((uint16_t)(MODE_2_VRAM_COLOR_BASE + 1u * MODE_2_COLOR_BLOCK_SIZE + (uint16_t)(ANIM_W * 8 * 8)));
-    vdp_write_bytes_otir(colors_bank1, sizeof(colors_bank1));
+    vdp_write_bytes_otir(color_block, sizeof(color_block));
+    vdp_set_address((uint16_t)(MODE_2_VRAM_COLOR_BASE + 1u * MODE_2_COLOR_BLOCK_SIZE));
+    vdp_write_bytes_otir(color_block, sizeof(color_block));
 
     vdp_set_address(VRAM_NT);
     vdp_blast_tilemap(nt_buffer);
@@ -146,23 +189,27 @@ void init_anim_demo(void)
 
 void render_anim_frame(void)
 {
+    Rect old_rects[RECT_COUNT];
+    memcpy(old_rects, rects, sizeof(rects));
+
     update_rects();
-    for (uint8_t y = 0; y < ANIM_H; ++y) {
-        for (uint8_t x = 0; x < ANIM_W; ++x) {
-            uint8_t pattern[8];
-            build_tile_pattern(x, y, pattern);
-            if (y < 8) {
-                uint16_t offset = (uint16_t)((y * ANIM_W + x) * 8);
-                memcpy(&patterns_bank0[offset], pattern, 8);
-            } else {
-                uint16_t offset = (uint16_t)(((y - 8) * ANIM_W + x) * 8);
-                memcpy(&patterns_bank1[offset], pattern, 8);
-            }
-        }
+    clear_dirty();
+    for (uint8_t i = 0; i < RECT_COUNT; ++i) {
+        mark_dirty_for_rects(&old_rects[i], &rects[i]);
     }
 
-    vdp_set_address((uint16_t)(MODE_2_VRAM_PATTERN_BASE + 0u * MODE_2_PATTERN_BLOCK_SIZE));
-    vdp_write_bytes_otir(patterns_bank0, sizeof(patterns_bank0));
-    vdp_set_address((uint16_t)(MODE_2_VRAM_PATTERN_BASE + 1u * MODE_2_PATTERN_BLOCK_SIZE + (uint16_t)(ANIM_W * 8 * 8)));
-    vdp_write_bytes_otir(patterns_bank1, sizeof(patterns_bank1));
+    wait_vblank();
+    for (uint8_t y = 0; y < ANIM_H; ++y) {
+        for (uint8_t x = 0; x < ANIM_W; ++x) {
+            if (!dirty_tiles[y][x]) continue;
+            uint8_t pattern[8];
+            build_tile_pattern(x, y, pattern);
+
+            uint8_t bank = (y < 8) ? 0 : 1;
+            uint8_t idx = (y < 8) ? (uint8_t)(y * ANIM_W + x) : (uint8_t)((y - 8) * ANIM_W + x);
+            uint16_t address = (uint16_t)(MODE_2_VRAM_PATTERN_BASE + (bank * MODE_2_PATTERN_BLOCK_SIZE) + ((uint16_t)idx << 3));
+            vdp_set_address(address);
+            vdp_write_bytes_otir(pattern, 8);
+        }
+    }
 }
